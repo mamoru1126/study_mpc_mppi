@@ -1,0 +1,1966 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>MPC と MPPI の数式解説（高校数学レベル）</title>
+<meta name="description" content="モデル予測制御（MPC）と MPPI の数式を、漸化式・平方完成・微分・指数関数・正規分布といった高校数学だけで解説する。1 次元の台車で手計算し、2 輪ロボットで MPPI を動かして確かめる。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/katex/katex.min.css">
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/contrib/auto-render.min.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #F2F3F0;
+  --surface: #FCFCFB;
+  --ink: #171A1F;
+  --ink-2: #4A515C;
+  --muted: #666D77;
+  --rule: #DADDD6;
+  --rule-strong: #BFC3BA;
+  --axis: #C3C2B7;
+  --code-bg: #E9EBE6;
+  --memo-bg: #ECEEE8;
+  --link: #1F5FAD;
+  --focus: #1F5FAD;
+  --mpc: #2A78D6;
+  --mpc-wash: rgba(42, 120, 214, 0.10);
+  --mppi: #EB6834;
+  --mppi-wash: rgba(235, 104, 52, 0.12);
+  --mppi-wash-2: rgba(235, 104, 52, 0.26);
+  --deemph: #8F8E86;
+  --ramp1: #7DB4F2;
+  --ramp2: #2A78D6;
+  --ramp3: #14467F;
+  --scene-floor: #F5F6F3;
+  --scene-wall: #DCE0D7;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #101214;
+    --surface: #181A1D;
+    --ink: #E7E9EB;
+    --ink-2: #B7BDC5;
+    --muted: #8A919A;
+    --rule: #2A2E33;
+    --rule-strong: #3D434A;
+    --axis: #45494F;
+    --code-bg: #212428;
+    --memo-bg: #1C1F23;
+    --link: #7DB3F0;
+    --focus: #7DB3F0;
+    --mpc: #3987E5;
+    --mpc-wash: rgba(57, 135, 229, 0.16);
+    --mppi: #D95926;
+    --mppi-wash: rgba(217, 89, 38, 0.18);
+    --mppi-wash-2: rgba(217, 89, 38, 0.34);
+    --deemph: #6B6B66;
+    --ramp1: #2C66AE;
+    --ramp2: #4F94E6;
+    --ramp3: #A6CBF7;
+    --scene-floor: #1A1D20;
+    --scene-wall: #2B3036;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #101214;
+  --surface: #181A1D;
+  --ink: #E7E9EB;
+  --ink-2: #B7BDC5;
+  --muted: #8A919A;
+  --rule: #2A2E33;
+  --rule-strong: #3D434A;
+  --axis: #45494F;
+  --code-bg: #212428;
+  --memo-bg: #1C1F23;
+  --link: #7DB3F0;
+  --focus: #7DB3F0;
+  --mpc: #3987E5;
+  --mpc-wash: rgba(57, 135, 229, 0.16);
+  --mppi: #D95926;
+  --mppi-wash: rgba(217, 89, 38, 0.18);
+  --mppi-wash-2: rgba(217, 89, 38, 0.34);
+  --deemph: #6B6B66;
+  --ramp1: #2C66AE;
+  --ramp2: #4F94E6;
+  --ramp3: #A6CBF7;
+  --scene-floor: #1A1D20;
+  --scene-wall: #2B3036;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-top: 20px; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "IBM Plex Sans JP", "Noto Sans JP", "Noto Sans CJK JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", Meiryo, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.85;
+  letter-spacing: 0.01em;
+  line-break: strict;
+  overflow-wrap: break-word;
+}
+@media (min-width: 760px) { body { font-size: 16.5px; } }
+a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 0.22em; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 2px; }
+.skip { position: absolute; left: -9999px; top: 0; }
+.skip:focus { left: 16px; top: 12px; z-index: 10; background: var(--surface); padding: 8px 12px; }
+
+.page { max-width: 1160px; margin: 0 auto; padding: 0 16px 96px; }
+@media (min-width: 1080px) {
+  .page { display: grid; grid-template-columns: 196px minmax(0, 1fr); column-gap: 64px; padding: 0 32px 128px; }
+}
+main { min-width: 0; max-width: 720px; }
+
+/* 目次 */
+.toc-rail { display: none; }
+@media (min-width: 1080px) {
+  .toc-rail { display: block; }
+  .toc-rail nav { position: sticky; top: 0; padding-top: 80px; padding-bottom: 24px; max-height: 100vh; overflow-y: auto; }
+}
+.toc-title { font-size: 13px; font-weight: 700; margin: 0 0 8px 14px; }
+.toc ol { list-style: none; margin: 0; padding: 0; }
+.toc li { margin: 0; }
+.toc a {
+  display: block; padding: 4px 0 4px 12px; border-left: 2px solid transparent;
+  color: var(--ink-2); text-decoration: none; font-size: 13.5px; line-height: 1.5;
+}
+.toc a:hover { color: var(--ink); }
+.toc a[aria-current="true"] { color: var(--ink); border-left-color: var(--ink); font-weight: 600; }
+.toc-mobile { margin: 28px 0 0; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
+.toc-mobile summary { padding: 11px 16px; cursor: pointer; font-weight: 600; font-size: 15px; }
+.toc-mobile .toc { padding: 0 16px 12px; }
+@media (min-width: 1080px) { .toc-mobile { display: none; } }
+
+/* 見出しまわり */
+.masthead { padding: 44px 0 0; }
+@media (min-width: 1080px) { .masthead { padding-top: 80px; } }
+h1, h2, h3, .subtitle, .panel-title, dl.glossary dt { word-break: auto-phrase; }
+h1 { font-size: clamp(42px, 10.5vw, 66px); line-height: 1.05; letter-spacing: -0.015em; font-weight: 700; margin: 0; font-feature-settings: "palt" 1; }
+.subtitle { font-size: clamp(18px, 4.4vw, 21px); line-height: 1.6; font-weight: 500; margin: 18px 0 0; max-width: 29em; font-feature-settings: "palt" 1; }
+.title-en { font-size: 13.5px; line-height: 1.55; color: var(--muted); margin: 10px 0 0; letter-spacing: 0; }
+
+.meta { display: grid; grid-template-columns: 4.5em minmax(0, 1fr); gap: 6px 16px; font-size: 14px; line-height: 1.7; margin: 28px 0 0; padding: 16px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.meta dt { color: var(--muted); }
+.meta dd { margin: 0; }
+.links { display: flex; flex-wrap: wrap; gap: 2px 16px; }
+
+section { margin-top: 72px; }
+h2 { font-size: 24px; line-height: 1.45; margin: 0 0 20px; font-weight: 700; font-feature-settings: "palt" 1; }
+h3 { font-size: 18.5px; line-height: 1.5; margin: 44px 0 12px; font-weight: 700; font-feature-settings: "palt" 1; }
+h4 { font-size: 16px; line-height: 1.5; margin: 0 0 4px; font-weight: 700; }
+.mark { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 10px; vertical-align: 0.02em; }
+.mark-mpc { background: var(--mpc); }
+.mark-mppi { background: var(--mppi); }
+.tag { display: inline-block; font-size: 12px; font-weight: 600; line-height: 1.6; padding: 0 9px; margin-left: 10px; border: 1px solid var(--rule-strong); border-radius: 999px; color: var(--ink-2); vertical-align: 0.25em; letter-spacing: 0.04em; }
+p { margin: 0 0 1em; }
+ul, ol { padding-left: 1.4em; margin: 0 0 1em; }
+li { margin: 0.4em 0; }
+li::marker { color: var(--muted); }
+strong { font-weight: 700; }
+.lead { font-size: 17px; }
+
+code, pre { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0; }
+code { font-size: 0.88em; background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 3px; }
+pre { background: var(--code-bg); padding: 14px 16px; border-radius: 6px; overflow-x: auto; font-size: 13.5px; line-height: 1.65; margin: 16px 0 6px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+.pre-note { font-size: 13.5px; color: var(--muted); margin: 0 0 1.2em; }
+
+/* 数式（KaTeX） */
+.katex { font-size: 1.1em; }
+.eq { margin: 18px 0; padding: 2px 0 2px 16px; border-left: 2px solid var(--rule-strong); overflow-x: auto; overflow-y: hidden; }
+.eq .katex-display { margin: 0.45em 0; text-align: left; }
+.eq .katex-display > .katex { text-align: left; }
+.eq-note { font-size: 14px; color: var(--ink-2); margin: -6px 0 1.2em; }
+.key-eq { border-left-color: var(--ink); }
+
+/* 図 */
+figure { margin: 28px 0; }
+.fig { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 16px; }
+.fig svg { display: block; width: 100%; height: auto; margin: 0 auto; max-width: 560px; }
+.fig svg.narrow { max-width: 500px; }
+.fig svg.panel-svg { max-width: none; }
+figcaption { font-size: 13.5px; line-height: 1.75; color: var(--ink-2); margin-top: 14px; }
+.fig-num { font-weight: 700; color: var(--ink); margin-right: 0.6em; }
+@media (max-width: 480px) {
+  .fig { padding: 12px; }
+  .plot .tick { font-size: 13px; }
+  .plot .ax-lab { font-size: 13.5px; }
+}
+
+svg .t { fill: var(--ink); font-size: 13px; }
+svg .t-b { fill: var(--ink); font-size: 13px; font-weight: 700; }
+svg .t-2 { fill: var(--ink-2); font-size: 12.5px; }
+svg .t-sub { fill: var(--muted); font-size: 12px; }
+svg .mi { font-family: KaTeX_Math, "Times New Roman", serif; font-style: italic; }
+svg .mn { font-family: KaTeX_Main, "Times New Roman", serif; font-style: normal; }
+
+.plot .grid { stroke: var(--rule); stroke-width: 1; }
+.plot .axis { stroke: var(--axis); stroke-width: 1; }
+.plot .tick { fill: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.plot .ax-lab { fill: var(--ink-2); font-size: 12.5px; }
+.plot .ref { stroke: var(--muted); stroke-width: 1.25; stroke-dasharray: 5 4; fill: none; }
+.plot .curve { fill: none; stroke: var(--ink-2); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.plot .curve-mppi { fill: none; stroke: var(--mppi); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.plot .band1 { fill: var(--mppi-wash-2); }
+.plot .band2 { fill: var(--mppi-wash); }
+.plot .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.plot .dot { stroke: var(--surface); stroke-width: 2; }
+.plot .line.r1 { stroke: var(--ramp1); } .plot .dot.r1 { fill: var(--ramp1); }
+.plot .line.r2 { stroke: var(--ramp2); } .plot .dot.r2 { fill: var(--ramp2); }
+.plot .line.r3 { stroke: var(--ramp3); } .plot .dot.r3 { fill: var(--ramp3); }
+.plot .gd { fill: var(--mpc); }
+.plot .gd-arrow { stroke: var(--mpc); stroke-width: 1.5; fill: none; }
+.plot .mppi { fill: var(--mppi); }
+.plot .hollow { fill: var(--surface); stroke: var(--ink-2); stroke-width: 2; }
+.plot .allowed { fill: var(--mpc-wash); }
+.plot .edge { stroke: var(--mpc); stroke-width: 1.25; }
+.plot .pick { fill: var(--mpc); stroke: var(--surface); stroke-width: 2; }
+.plot .guide { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 3 3; }
+.plot .mean-line { stroke: var(--ink); stroke-width: 2; }
+.plot .theory-line { stroke: var(--mppi); stroke-width: 1.5; stroke-dasharray: 2 3; }
+.plot .wbar { stroke: var(--mppi); stroke-width: 2; stroke-linecap: round; }
+
+.scene .floor { fill: var(--scene-floor); }
+.scene .frame { fill: none; stroke: var(--rule-strong); stroke-width: 1; }
+.scene .person { fill: var(--deemph); }
+.scene .ps { fill: none; stroke: var(--deemph); stroke-width: 1; stroke-dasharray: 3 3; }
+.scene .robot { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
+.scene .heading { stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
+.scene .goal { stroke: var(--ink); stroke-width: 2.5; stroke-linecap: round; fill: none; }
+.scene .samp-lo { fill: none; stroke: var(--deemph); stroke-width: 1; opacity: 0.45; stroke-linejoin: round; }
+.scene .samp-mid { fill: none; stroke: var(--mppi); stroke-width: 1.25; opacity: 0.6; stroke-linejoin: round; }
+.scene .samp-hi { fill: none; stroke: var(--mppi); stroke-width: 2; stroke-linejoin: round; }
+.scene .mean { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.scene .mpc-path { fill: none; stroke: var(--mpc); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.scene .mpc-dot { fill: var(--mpc); stroke: var(--scene-floor); stroke-width: 1.5; }
+
+.diagram .box { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
+.diagram .line-ink { stroke: var(--ink); stroke-width: 2; fill: none; stroke-linecap: round; }
+.diagram .line-2 { stroke: var(--ink-2); stroke-width: 1.25; fill: none; }
+.diagram .line-dash { stroke: var(--ink-2); stroke-width: 1.25; fill: none; stroke-dasharray: 4 4; }
+.diagram .line-mute { stroke: var(--deemph); stroke-width: 2; fill: none; stroke-dasharray: 2 4; stroke-linecap: round; }
+.diagram .exec { stroke: var(--ink); stroke-width: 3; fill: none; stroke-linecap: round; }
+.diagram .dot-ink { fill: var(--ink); }
+.diagram .dot-mute { fill: var(--surface); stroke: var(--deemph); stroke-width: 1.5; }
+.diagram .dot-hollow { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
+.diagram .wash { fill: var(--mpc-wash); }
+.diagram .ground { stroke: var(--axis); stroke-width: 1.5; }
+
+/* 図1 */
+.hero { margin: 32px 0 0; }
+.hero-grid { display: grid; gap: 16px; }
+@media (min-width: 640px) { .hero-grid { grid-template-columns: 1fr 1fr; } }
+.panel-title { font-size: 14.5px; font-weight: 700; margin: 0 0 6px; line-height: 1.5; }
+.panel-title small { display: block; font-size: 12.5px; font-weight: 400; color: var(--ink-2); }
+.panel-svg { border-radius: 6px; overflow: hidden; }
+.key-row { display: flex; flex-wrap: wrap; gap: 4px 20px; font-size: 13px; color: var(--ink-2); margin: 14px 0 0; }
+.key { display: inline-flex; align-items: center; gap: 8px; }
+.key-line { display: inline-block; width: 22px; border-top: 2px solid var(--ink-2); }
+.key-line.mpc { border-top: 3px solid var(--mpc); }
+.key-line.samp { border-top: 2px solid var(--mppi); }
+.key-line.mean { border-top: 3px solid var(--ink); }
+.key-line.r1 { border-top-color: var(--ramp1); }
+.key-line.r2 { border-top-color: var(--ramp2); }
+.key-line.r3 { border-top-color: var(--ramp3); }
+.key-line.ref { border-top: 1.5px dashed var(--muted); }
+.key-line.theory { border-top: 2px dotted var(--mppi); }
+.key-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--deemph); }
+
+/* 解説メモ */
+.memo { background: var(--memo-bg); border-left: 3px solid var(--ink-2); padding: 14px 18px 4px; margin: 28px 0; border-radius: 0 6px 6px 0; font-size: 15px; }
+.memo-title { font-size: 13.5px; font-weight: 700; color: var(--ink-2); margin: 0 0 6px; }
+.memo ul { margin-bottom: 10px; }
+.memo .eq { border-left-color: var(--rule-strong); }
+
+details.proof { margin: 24px 0; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
+details.proof > summary { padding: 11px 16px; cursor: pointer; font-weight: 600; font-size: 15px; }
+details.proof > .proof-body { padding: 2px 18px 6px; font-size: 15.5px; }
+
+/* 表 */
+.table-wrap { overflow-x: auto; margin: 20px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; line-height: 1.65; }
+th, td { padding: 9px 10px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+thead th { font-weight: 600; color: var(--ink-2); border-bottom: 1px solid var(--rule-strong); font-size: 13.5px; }
+tbody th { font-weight: 600; }
+tbody th small { font-weight: 400; color: var(--muted); font-size: 12.5px; }
+tfoot td, tfoot th { border-top: 1px solid var(--rule-strong); border-bottom: 0; font-weight: 600; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nowrap { white-space: nowrap; }
+.table-note { font-size: 13.5px; color: var(--muted); margin: -8px 0 1.2em; }
+td.best, th.best { background: var(--mppi-wash); }
+@media (min-width: 641px) {
+  table.cmp tbody th, table.first-nowrap tbody th { white-space: nowrap; }
+}
+@media (max-width: 640px) {
+  table.stack thead { display: none; }
+  table.stack tr { display: block; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+  table.stack th, table.stack td { display: block; border: 0; padding: 2px 0; }
+  table.stack tbody th { font-size: 15.5px; margin-bottom: 4px; }
+  table.stack td::before { content: attr(data-label); display: block; font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+}
+
+/* 動かせる図 */
+.controls { display: grid; grid-template-columns: auto minmax(0, 1fr) 5.2em; gap: 4px 12px; align-items: center; font-size: 14px; margin: 14px 0 0; }
+.controls label { color: var(--ink-2); white-space: nowrap; }
+.controls output { font-variant-numeric: tabular-nums; text-align: right; color: var(--ink); }
+.controls input[type="range"] { width: 100%; margin: 0; min-height: 32px; accent-color: var(--ink-2); }
+.btn-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0 0; }
+.btn, .select {
+  font: inherit; font-size: 14px; line-height: 1.4; min-height: 36px; border-radius: 999px;
+  border: 1px solid var(--rule-strong); background: var(--surface); color: var(--ink); cursor: pointer;
+}
+.btn { padding: 7px 16px; }
+.btn:hover, .select:hover { border-color: var(--ink-2); }
+.btn.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); font-weight: 600; }
+.select { padding: 6px 12px; border-radius: 8px; }
+.readout { display: flex; flex-wrap: wrap; gap: 2px 18px; font-size: 13.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; margin: 12px 0 0; }
+.readout b { color: var(--ink); font-weight: 600; }
+.ifig-note { font-size: 14.5px; line-height: 1.75; margin: 12px 0 0; min-height: 3.5em; }
+.demo-canvas { display: block; width: 100%; height: auto; aspect-ratio: 10 / 6; border-radius: 6px; background: var(--scene-floor); }
+.try { font-size: 15px; }
+
+/* 用語集・文献 */
+dl.glossary { margin: 0; }
+dl.glossary dt { font-weight: 700; margin-top: 18px; }
+dl.glossary dd { margin: 2px 0 0; color: var(--ink); }
+.refs li { margin: 0.6em 0; }
+.foot { margin-top: 80px; padding-top: 20px; border-top: 1px solid var(--rule); font-size: 13.5px; color: var(--ink-2); }
+</style>
+</head>
+<body>
+<a class="skip" href="#content">本文へ移動</a>
+<div class="page">
+
+<aside class="toc-rail" aria-label="目次">
+  <nav class="toc">
+    <p class="toc-title">目次</p>
+    <ol>
+      <li><a href="#summary">要点</a></li>
+      <li><a href="#tools">使う高校数学</a></li>
+      <li><a href="#model">モデル：漸化式で書く</a></li>
+      <li><a href="#cost">コスト：計画の点数</a></li>
+      <li><a href="#receding">1&nbsp;手だけ実行して計画し直す</a></li>
+      <li><a href="#mpc">MPC：平方完成で解く</a></li>
+      <li><a href="#constraint">入力の上限と定義域</a></li>
+      <li><a href="#nonlinear">2&nbsp;輪ロボットと勾配降下法</a></li>
+      <li><a href="#mppi">MPPI：ばらまいて平均する</a></li>
+      <li><a href="#temperature">温度 λ の役割</a></li>
+      <li><a href="#sequence">何手も先を予測する MPPI</a></li>
+      <li><a href="#demo">MPPI を動かす</a></li>
+      <li><a href="#why-exp">なぜ指数関数か（発展）</a></li>
+      <li><a href="#link">MPC とのつながり（発展）</a></li>
+      <li><a href="#compare">MPC と MPPI の比較</a></li>
+      <li><a href="#nav2">Nav2 のパラメータ</a></li>
+      <li><a href="#notation">記号の一覧</a></li>
+      <li><a href="#glossary">用語集</a></li>
+      <li><a href="#refs">参考文献</a></li>
+    </ol>
+  </nav>
+</aside>
+
+<main id="content">
+
+<header class="masthead">
+  <h1>MPC と MPPI</h1>
+  <p class="subtitle">先を予測して、いちばん良い動かし方を選ぶ。その「選び方」を、漸化式・平方完成・微分・指数関数・正規分布で読み解く</p>
+  <p class="title-en">Model Predictive Control (MPC) / Model Predictive Path Integral Control (MPPI)</p>
+</header>
+
+<figure class="hero">
+  <div class="fig">
+    <div class="hero-grid">
+      <div>
+        <p class="panel-title"><span class="mark mark-mpc" aria-hidden="true"></span>MPC<small>微分を使って、入力の列を 1&nbsp;本に磨き上げる</small></p>
+        <svg class="scene panel-svg" viewBox="0 0 400 200" role="img" aria-label="MPC の例。ロボットが左端、ゴールが右端、中央に人がいる。最適化した 1 本の予測軌跡が、人の下側を回ってゴール付近まで伸びている。">
+        <rect class="floor" x="0" y="0" width="400" height="200"/>
+        <circle class="ps" cx="200" cy="94" r="46"/>
+        <circle class="person" cx="200" cy="94" r="12"/>
+        <polyline class="mpc-path" points="36,100 44,100 52,100.8 59.9,102.1 67.7,103.6 75.5,105.4 83.3,107.1 91.1,108.9 98.9,110.8 106.7,112.6 114.4,114.5 122.2,116.5 129.9,118.6 137.6,120.7 145.3,123 152.9,125.4 160.5,127.9 168.1,130.4 175.8,132.8 183.5,134.9 191.3,136.4 199.3,137.2 207.3,137.1 215.3,136.2 223.1,134.8 230.9,133.1 238.7,131.2 246.5,129.2 254.2,127.2 262,125.2 269.7,123.2 277.5,121.3 285.2,119.4 293,117.5 300.8,115.6 308.5,113.6 316.3,111.7 324.1,109.8 331.9,107.9 339.6,106 347.4,104.1"/>
+<g><circle class="mpc-dot" cx="52" cy="100.8" r="3"/><circle class="mpc-dot" cx="67.7" cy="103.6" r="3"/><circle class="mpc-dot" cx="83.3" cy="107.1" r="3"/><circle class="mpc-dot" cx="98.9" cy="110.8" r="3"/><circle class="mpc-dot" cx="114.4" cy="114.5" r="3"/><circle class="mpc-dot" cx="129.9" cy="118.6" r="3"/><circle class="mpc-dot" cx="145.3" cy="123" r="3"/><circle class="mpc-dot" cx="160.5" cy="127.9" r="3"/><circle class="mpc-dot" cx="175.8" cy="132.8" r="3"/><circle class="mpc-dot" cx="191.3" cy="136.4" r="3"/><circle class="mpc-dot" cx="207.3" cy="137.1" r="3"/><circle class="mpc-dot" cx="223.1" cy="134.8" r="3"/><circle class="mpc-dot" cx="238.7" cy="131.2" r="3"/><circle class="mpc-dot" cx="254.2" cy="127.2" r="3"/><circle class="mpc-dot" cx="269.7" cy="123.2" r="3"/><circle class="mpc-dot" cx="285.2" cy="119.4" r="3"/><circle class="mpc-dot" cx="300.8" cy="115.6" r="3"/><circle class="mpc-dot" cx="316.3" cy="111.7" r="3"/><circle class="mpc-dot" cx="331.9" cy="107.9" r="3"/><circle class="mpc-dot" cx="347.4" cy="104.1" r="3"/></g>
+        <path class="goal" d="M357 93l14 14M371 93l-14 14"/>
+        <circle class="robot" cx="36" cy="100" r="10"/>
+        <line class="heading" x1="36" y1="100" x2="50" y2="100"/>
+        <text class="t-2" x="200" y="40" text-anchor="middle">人</text>
+        <text class="t-2" x="364" y="128" text-anchor="middle">ゴール</text>
+        <text class="t-2" x="36" y="128" text-anchor="middle">ロボット</text>
+        </svg>
+      </div>
+      <div>
+        <p class="panel-title"><span class="mark mark-mppi" aria-hidden="true"></span>MPPI<small>ばらまいた 48&nbsp;本の候補を、重みをつけて平均する</small></p>
+        <svg class="scene panel-svg" viewBox="0 0 400 200" role="img" aria-label="MPPI の例。まっすぐ進む案のまわりに 48 本の候補軌跡が扇形に広がる。人にぶつかる候補は灰色で、重みの大きい候補はオレンジで濃く描かれ、それらの重みつき平均の軌跡が人の下側を回ってゴール付近まで伸びている。">
+        <rect class="floor" x="0" y="0" width="400" height="200"/>
+        <polyline class="samp-lo" points="36,100 42.8,100 49.4,98.8 57.3,98.2 64,97.6 70.5,97.2 78.5,97.6 85,98.5 92.5,99.7 100.5,100.5 107.8,101.7 115.7,102.9 123.7,103.5 131,103.9 137.5,103.7 143.3,103.2 151,102.2 158.2,99.9 165.6,96.9 172.5,94.1 179.2,90.8 185.8,88.3 192.8,85.9 200.1,82.6 206.8,79.2 213.3,74.5 219.7,69.7 226.8,66 231.6,62.2 237.2,56.5 243.4,51.4 248.1,46.4 253.5,40.5 259.9,35.7 265.9,31.6 272.1,27.8 277.2,23.4 283.7,18.7 290.3,14.1 296.6,10 303.5,5.9"/>
+        <polyline class="samp-lo" points="36,100 44,100 52,100.4 59.7,102.5 66.2,104.7 72.5,106.8 80.4,108.4 87.2,110.6 94.2,112.3 100.1,113.2 107.9,115 115.7,117 122.5,117.5 130.4,116.7 138.3,115.2 143.3,114.1 150.3,111.7 157.4,109.3 165,106.8 172.7,105.1 180.2,103.4 188,101.7 195,97.9 202.1,94.2 208.2,90 213.3,85.4 219.3,80.2 223.9,75.1 229.9,70.9 236.4,66.3 242.5,61 249.6,57.4 257.1,54.6 263.3,51.6 270.6,48.2 278.2,45.6 285.9,43.4 293.6,41.5 299.7,39.6 306.1,37.3 313.6,34.8"/>
+        <polyline class="samp-lo" points="36,100 43.9,100 51.9,100.9 59.9,100.8 67.9,100.7 75.7,100.6 82.1,100.4 89.1,101.9 97,103.1 104.9,104.6 111.7,106.1 117.6,107.4 125.2,109.8 132.6,111.5 139.9,113.7 146.9,116.5 154,120.1 161.2,123.7 168.7,126.6 175.9,130 182.6,134.5 189.6,138.2 195.9,142.4 203,146 210.1,149.7 216.6,153.6 223.2,158.2 230,162.5 236.2,165.7 241.4,168.5 248.8,171.6 256.6,173.1 264.4,174.8 270.5,176.9 277.8,180.2 284.5,184.6 290.8,189.2 296.6,194.2 301.9,200.1 307.4,205.6 311.2,212.3"/>
+        <polyline class="samp-lo" points="36,100 44,100 51.5,99.6 57.7,99.1 65.4,97 72.9,94.1 79.9,90.4 87.4,87.5 94.6,85.2 101.7,82.3 108.8,78.6 115.9,74.9 122.8,70.7 130,67.2 136.6,63.9 143.9,61.2 151.3,58.2 158.8,55.5 166.1,53.4 173.3,51.4 180.4,47.8 187.9,45 195.6,42.6 201.5,40 208.5,37.3 214.8,33.5 221.6,29.2 226.6,26 233.2,21.4 238.8,15.8 244.1,9.8 248.2,4.6 253,-1.8 258.7,-7.3 263.5,-11.2 268.9,-17.1 273.8,-23.4 277.9,-29.3 282,-36.1 286.3,-42.4 290.6,-49.2"/>
+        <polyline class="samp-lo" points="36,100 43.6,100 51.4,98.4 57.6,97.6 64.5,96.6 68.6,96.2 76.6,95.9 84.5,96.5 92.5,97.6 100.1,98.6 107.1,100.2 115,101.2 122.6,101.1 130.2,102.1 138.2,102.6 146.2,102.8 154.2,102.9 160.3,101.5 167.8,98.7 174.5,96 180.6,93.4 185.7,92.4 193.4,90.4 200.1,89.1 207,87.6 214.8,85.9 221.2,83.9 228.2,79.9 234.6,75.4 240.5,70 246.6,64.7 251.6,59.9 256.9,54 263,48.9 267.9,42.7 273.2,37 279.3,31.8 283.5,26.9 287.3,19.8 291.6,13.1 296.1,6.9"/>
+        <polyline class="samp-lo" points="36,100 44,100 51.1,100 58.9,100.7 66.7,102.1 73.8,104.9 81.3,107.8 88.8,110.5 95.7,114.5 102.1,119.3 106.8,123.4 111.4,127.4 117.6,132.5 124.2,136.9 131.5,140.3 139,143 146.9,144.6 153.4,146.8 160.9,149.7 168.6,151.8 175.2,153.3 181.9,154.9 189.1,158.2 195.6,162.8 199.4,165.1 206.4,168.9 213.3,173 219.8,177.3 225.7,182.7 231.7,188 237.3,191.8 244.5,195.3 251.5,198.6 257.6,201.6 264.4,205.9 271.6,209.4 277.6,211.1 283.3,213.1 289,214.9 296.6,217.3 303.9,220"/>
+        <polyline class="samp-lo" points="36,100 44,100 52,99.3 59.9,100.3 67.9,101 74.7,101 81.6,100.7 89.5,100.3 97.4,99 105.4,98.4 113.3,98.5 120.1,98.4 128.1,97.4 135.9,95.9 143.8,94.5 150.4,93.1 157.8,91.1 165.2,90 173.2,91 181,92.8 188.4,95.7 195.8,98.9 202.3,102.7 208.9,107.3 215.7,111.5 222.2,115.4 229.1,119.5 236.6,122.3 242.8,124.9 250,128.2 257.4,130.4 263.8,133.1 270.6,137.3 277.5,140.3 285,143.1 292.7,145.5 300.5,147.3 307.6,148.2 315.1,149.4 323,150.6 330.1,152.5"/>
+        <polyline class="samp-lo" points="36,100 44,100 49.6,100.8 56.7,102.3 64.4,104.2 72.2,106 80,108 87.5,110.7 95.1,113.2 102,116.3 107,119.8 112.6,125.6 117.5,130 122.4,136.3 127.6,142.4 133.2,148.1 139.3,153.3 145.2,158.7 150.9,164.3 156.6,169.9 160.9,174.7 165.4,181.3 170.8,187.2 175.6,193.6 180.7,198.5 186.2,203.1 190.3,206.8 195.7,211.4 202.4,215.7 208.4,220.9 213.2,226 217.7,231.7 222.6,237.9 227.8,243.8 232.7,249.5 237,255.2 241.5,261.8 246.7,267.9 252,272.9 257.5,277.8 262.7,283.9"/>
+        <polyline class="samp-lo" points="36,100 43.7,100 50.9,100 58.9,99.5 66.9,98.9 74.7,96.9 82.4,95.1 90.3,93.4 97.4,91.9 104.6,91.8 112.5,93 119.7,93.6 127.6,94.5 135.6,94.3 143.6,94.2 151.6,94.1 159.6,93.2 167,92.2 174.6,89.8 181.7,88.3 189.5,86.3 197.1,83.8 203.5,81.3 207.9,78.9 214.5,74.4 221,69.8 227.8,65.6 233.5,61.2 239.5,56.5 245.3,50.9 250.2,44.6 254.9,38.2 260.2,32.1 265,26.9 269.8,20.6 274.4,14.9 278.5,8 281.5,2.9 285.2,-3.7 289.5,-10.5 293.4,-16.6"/>
+        <polyline class="samp-lo" points="36,100 43.7,100 51.4,99.4 58.5,98.9 66.5,98.5 72.8,98.6 80.1,99 88,100 96,99.9 103.7,98.6 111.7,97.4 117.3,96.6 125.3,96.9 133.3,97.6 139.9,97.9 145.8,98 153.3,98 161.2,97.3 169.2,96.5 177.2,96 185,94.2 193,93.9 199.4,94.4 206.9,95.5 214.2,97.1 221.8,99.3 229,101.6 236.4,104.6 243.8,107.5 251.4,110.1 259,112.5 266.7,114.9 274,117.9 281,121.8 287.9,125.8 294.7,129 301.1,131.7 308.6,134 316.5,135.5 323.3,136 331.3,137.2"/>
+        <polyline class="samp-lo" points="36,100 44,100 51.6,99.7 59.5,100.5 67.5,101.3 74.2,102.2 82.2,101.8 90.1,101 98.1,101.8 105.3,102.1 113.3,102.2 121.3,102.5 129.2,103.1 137,103.3 145,103 153,102.4 161,102.6 168.9,103 176.5,104.7 183.9,107.7 190.9,111 197.7,115.2 204.3,119.7 211.2,122.4 217.5,124.5 224.1,127.5 230.5,132.3 236.4,137.7 241.4,143.9 244.3,150 247.9,156.7 251.4,163.9 255,171.1 260.6,176.8 266.2,182.4 271.9,188.1 277.2,193.1 281.2,197.3 286,203.3 289.6,208.2 294.9,214"/>
+        <polyline class="samp-lo" points="36,100 42.2,100 48.5,98.9 54.9,97.4 62.7,96.5 70.4,94.3 77.7,91 85.3,88.5 92.9,88.1 100.8,86.9 108.8,86.2 116.8,85.7 122.5,85.6 130.4,84.4 136.2,82.6 142.3,80.2 149.8,77.4 156.8,74.6 164,71.1 171.6,68.8 177.8,66.1 185.2,63.1 192.1,60.1 199.4,56.8 206.3,52.9 212.8,48.2 217.8,42.6 223.4,36.9 229.4,31.6 234.6,26.9 240.1,22.5 245.9,17 252.2,12 258.1,7.1 263.5,1.7 267.1,-2.7 271.9,-9.1 275.8,-15.9 278.1,-21.7 281.6,-27.4 285,-33.4"/>
+        <polyline class="samp-lo" points="36,100 44,100 52,100.7 60,100.5 68,100.1 74.9,99.5 81.9,100.6 88.5,100.1 96.3,98.3 102.7,96 109.9,93.2 117.1,89.7 122.8,84.7 129.1,79.8 135,74.4 139,70.3 143.3,65.7 148.5,59.6 153.6,54.7 159,48.8 165.1,43.6 169.7,37.8 174.1,31.2 179.1,24.9 185.2,19.7 190.4,15.2 196,9.7 201.7,5.1 207,-0.9 211.9,-6.9 216.6,-12.3 222.7,-17.5 228.8,-22.8 234.5,-27.6 240.3,-33.2 245.4,-39.4 250.4,-45.6 255,-52.1 258.7,-59.2 261.6,-66.1 264.9,-73.4"/>
+        <polyline class="samp-lo" points="36,100 43,100 50.8,100.5 58.7,100.4 66.6,101.6 74,102.8 81.8,104.6 89.5,106.5 96.1,108.8 103.4,110.8 111.1,112.9 118.5,115.5 125.1,117.5 130.2,119 137.7,121.8 144.7,124.9 151.5,127.3 158.7,130.7 165.9,134.2 171.1,137 177.9,140.4 185,144.2 192.7,146.4 198.6,149.3 206,152.4 213.4,155.5 219.7,157.5 225,160.1 230.9,162.2 238,166 245.3,169.3 252.7,172.2 259.5,174.9 266.5,178.3 273.4,182.5 279,185.8 283.9,189.2 289.3,194.9 293.6,201.6 298.5,208 303.8,213.9"/>
+        <polyline class="samp-lo" points="36,100 44,100 51.9,101.1 59.8,102.6 67.7,103.8 75.7,103.5 83.7,102.9 89.5,102.7 97.5,101.7 105.4,100.5 112.6,99.5 120.4,97.6 127.9,96.5 135.7,95.2 141.8,94.1 147.3,92.5 154.6,91.4 162.6,91.1 170.6,91.2 178.3,91.4 185.5,91.6 193.5,92.2 201.5,92.3 209.5,92 217.4,91.4 223.1,91.7 230.2,91.1 237.1,91.6 243.5,92.2 250.6,92.3 257.8,92.8 265.5,92.4 272.6,90.6 280,87.4 287.2,84 294.1,79.9 301.1,76.1 306.1,73.2 311.2,69.9 317.1,66.1 323.7,61.6"/>
+        <polyline class="samp-lo" points="36,100 43.5,100 51.4,98.9 59.3,97.6 65.5,96.1 71.6,94.5 79.2,92.1 86.9,89.9 92,87.5 97.7,85.3 103.8,81.7 110.8,77.8 117.3,73.2 123.8,68.5 130.1,63.5 135.5,57.7 139.7,52.9 145.5,47.4 151.2,41.8 155.5,36.9 160.7,33.2 166.8,27.9 172.2,22 178.5,17.1 183.2,13.4 188.1,9 194.5,4.3 200.6,0.2 207.4,-4.1 213.9,-8.8 219.8,-14.2 225.6,-19.6 231.5,-25.1 236.7,-31.1 241.6,-37.4 245.8,-42.7 249.9,-49.6 254.3,-55.2 258.1,-60.4 263.1,-66.6 268.4,-72.6"/>
+        <polyline class="samp-lo" points="36,100 42.1,100 50.1,100.9 56.6,101.8 64.4,103.5 72.1,105.9 77.9,107.8 85.3,110.9 92.4,113.6 98.1,118.1 103.7,123.8 109.9,128.8 115.9,133.3 121.7,138.9 127.3,144.6 132.4,150.5 135.9,154.8 141.7,160.2 147.3,166 153,171.6 157.4,176.7 162.1,183.2 165.6,190.4 168.7,197.8 171.4,205.3 173.3,211 175.8,218.6 178.1,225.6 180.3,231 183.1,238.5 186.8,245.4 190.8,252 195.8,258.2 200.4,264 204.3,267.8 208.1,271.5 212.8,277.9 217.3,284.2 221.4,290 223.7,294.9 226.1,301.4"/>
+        <polyline class="samp-lo" points="36,100 44,100 52,99.8 60,100.1 68,100.5 76,100.2 83.9,99.4 90.1,98.9 98,98.1 104.8,97.5 112.6,96 120.4,94.6 128.1,92.4 135.9,90.7 143.7,88.9 151.6,88.1 159.6,87.4 167.5,86 175.4,85.4 183.4,85.1 191.4,84.7 197.9,84.6 205,83.9 212.9,84 220.9,83.5 228.7,81.9 236,79 243.5,76.2 251.2,73.9 259.1,72.9 266.9,71.3 274.6,69 282.2,66.5 289.7,63.8 295.6,61.1 302.5,58.3 310.2,56.4 318.2,55.6 326.2,55.4 332,55.8 339.8,57.5"/>
+        <polyline class="samp-lo" points="36,100 44,100 51.5,99.9 59.5,99.6 67.3,100.5 75.2,101.7 83.1,100.6 91.1,99.6 98.7,97.2 105,94.6 110.4,91.2 116.4,86.1 122.4,80.8 128.2,76.8 133.2,72.2 138.7,66.3 142.6,61.6 146.8,55.7 151.6,49.9 156.1,44.3 160.6,38.7 166.5,33.3 173,28.6 179.6,24.1 185.1,21.8 192.3,18.3 199.2,14.2 206.1,10.2 212.9,5.9 220.3,3 227.7,-0 234.8,-3.6 241,-7.2 246.7,-11.1 251.9,-14.7 257.4,-20.5 262.2,-25.9 266.9,-32.4 271,-39.3 275.6,-45.8 280.6,-51.5"/>
+        <polyline class="samp-lo" points="36,100 44,100 51.3,99.5 57.2,99.1 65.2,99.1 73.1,100 80.6,100.8 88.5,102.1 96.1,104.5 103.6,107.2 111.3,109.3 119.3,110.4 127.3,110.8 134.6,110.1 142.6,109.6 150.6,109.1 158.6,109.3 166.6,110.1 171.4,109.8 179.3,108.8 187.2,107.3 192.2,104.7 198.5,99.8 205.2,95.3 210.9,90.5 217.1,86 223,80.6 229.8,76.4 235.2,73.6 242.2,70.7 248.8,66.2 256.1,62.9 262.9,58.7 268.2,54.5 273.8,49.8 279.5,44.2 283.1,37.8 286.8,30.7 290.2,24.6 293,17.1 295.1,9.3"/>
+        <polyline class="samp-lo" points="36,100 44,100 52,99.6 59.2,99.2 67.2,98.4 75.2,97.7 82.6,97.2 89.1,96.1 94.5,94.4 102,91.7 107.9,89.6 114.4,88.1 122.3,87.1 130.3,86 138.2,85.1 146.1,84.1 153.7,84 160.7,84 167.7,85.3 175.4,87.7 182.8,90.6 190.5,93 197.9,95.8 202.7,98.2 210,101.5 217.2,104.8 221.8,106.4 229.4,108.7 237.1,110.9 244.8,113.2 252.6,115 260.2,117.3 267.4,120.8 274.9,123.5 282.3,126.7 289.7,129.7 297.2,132.4 305,134.2 312,138.2 318,142.5 324.5,146.1"/>
+        <polyline class="samp-lo" points="36,100 44,100 52,99.9 60,99 67.6,97.9 75.5,97.1 81.5,95.9 88.7,94.1 95.7,93 103.6,91.9 111.3,92.7 119,94.6 124.7,96.9 132.3,99.3 140.1,101.2 148.1,102 156,102.5 163.7,101.5 171,100.8 179,100.7 186.6,101.2 193.4,101.4 201.4,102.2 208.9,103.6 216.7,105.4 224.5,107.1 230.5,109.2 238.1,111.8 244.2,113.9 252.1,115.2 260.1,116.3 267.3,118.3 274.5,120 282.4,121.8 289.7,124.3 295.1,128.4 301.8,132.6 308.5,137 314.9,141.8 321.2,146.8 328.1,150.8"/>
+        <polyline class="samp-lo" points="36,100 44,100 51.9,100.9 59,103.2 66.8,104.8 73.6,106.3 81.3,108.4 89.2,109.3 97.2,108.4 105.1,107.5 113,106.3 119,103.7 125.1,101.4 131.7,98 138.4,93.6 145.3,89.6 152.6,86.2 159.8,83.5 167.3,80.6 173.4,77.9 179.7,72.9 186.4,68.5 193,64 199.9,60 206.2,55.5 212.5,50.6 218.9,46.8 225.5,43.2 231.7,39.8 238.4,35.4 244.8,30.6 250.9,25.4 256.3,20.6 260.9,16 265.8,11 270.7,4.7 274.5,-0.8 279.6,-7 283.9,-12.4 289.1,-17.8 294.6,-23.6"/>
+        <polyline class="samp-lo" points="36,100 44,100 51.9,99.5 59.2,98.5 67.2,98.6 75,100.6 81.7,102.3 89.1,103.7 96.8,105.7 104.6,107.5 112.3,109.7 119.6,112.1 127.3,114.3 133.3,115.3 141.3,116.1 149,117.1 156.9,118.7 163.4,119.9 170.8,122.9 176.9,125.3 182.6,127.6 190,130.6 196,133.3 203.3,136.6 209.5,140.6 216.5,144.4 223.4,148.4 230.3,152.5 237,156.8 242.3,161.5 248.2,166 254.5,171 260.6,176.2 266.5,180.8 273.6,184.5 280.7,188.3 287.9,191.6 294.6,193.3 302.3,195.4 309.6,196.5 316.1,197.4"/>
+        <polyline class="samp-lo" points="36,100 43.8,100 51.8,99.8 58.2,99.4 66.2,99.5 73.4,99.1 81.4,99.2 89.3,100.1 93.6,101.2 100.6,104.6 106.6,108 111.8,112.6 117.4,118.1 122.9,123.9 129.2,128.9 134.9,134.5 141.2,139.4 145.8,142.8 151.9,146.9 157.3,151.2 162.6,156 168.2,161.7 173.9,167.3 179,171.9 184.6,177.6 190.8,182.1 196.5,184.9 202.6,190.1 208.2,194.9 214.3,200.2 219.8,206 223,211.9 225.4,219.6 227.7,226.8 230,233.1 233,240.1 236.6,247.3 239.9,254.6 243,259.9 247.4,266.6 251.9,272"/>
+        <polyline class="samp-lo" points="36,100 43.2,100 49.3,100.4 57.3,100.8 64.6,99.9 71,97.9 76.1,96.1 83.7,93.7 89.5,91 96.6,87.3 103.4,83.2 110.3,79.1 116.9,76.2 122.3,74.7 130,72.7 137.9,71.4 145,69.7 152.5,67.1 159.6,63.4 166.6,59.5 172.1,54.9 177.4,49 182.6,42.9 187.2,36.4 192.1,30.1 198.7,25.6 203.7,21.3 209.5,15.7 214.2,9.3 218.6,2.6 223,-4 227.7,-10.4 232.8,-16.6 237.7,-22.9 242.2,-26.8 248.6,-31.4 254.7,-36.6 261.4,-40.2 268.3,-42.8 276,-45.1 283.7,-47.1"/>
+        <polyline class="samp-lo" points="36,100 44,100 52,99.6 59.9,98.4 67.2,97.9 75.2,97.3 82.4,97.1 90.1,95.4 98,94 105.8,92.6 111.6,92.3 118.2,92.6 126.2,92.5 131.8,92.5 139.8,92 146.4,91.5 153.7,88.9 160.6,86.6 168,83.3 174.2,81 181.9,78.6 189.8,77.4 194.4,75.3 201.2,73.8 207.3,72.4 215.1,70.9 222.8,68.7 230.7,67 238,63.8 244.9,59.7 251,55.7 257.4,50.9 262.7,45.9 267.6,40.8 272.2,34.2 275.3,28.5 279.1,21.6 282.1,15.4 285.4,8.1 287.7,0.5 289.9,-6.5"/>
+        <polyline class="samp-lo" points="36,100 42.6,100 50.6,99.6 58.5,100.4 65.9,100.7 73.9,101 81.8,101.5 88.6,101.3 96.5,102 104.4,101.6 108.8,101.2 116.8,100.9 124.8,101.6 132.8,100.8 140.6,100.2 147.7,100.6 155.7,101.1 161.8,101.2 169.7,100.7 177.5,99 185.2,96.8 192.4,94.7 199.4,90.8 205.4,85.5 211.6,81.1 217.6,75.8 223.3,71.3 228.7,65.4 233.8,60.7 239,55.6 242.9,50.1 246.9,44.2 250.3,37.2 254.3,30.3 259.1,23.9 264.6,18 269.6,11.8 275,5.9 278.8,0.2 282.7,-5.4 286.2,-12.5"/>
+        <polyline class="samp-lo" points="36,100 42.8,100 50.7,98.5 58.4,96.5 66.3,95.1 74,93.2 81.5,90.3 88.7,86.8 95.7,82.9 102.4,80.3 107.5,78.3 114.7,74.9 121.2,72 128.1,69.2 135.2,65.9 142.6,62.9 148.3,61.1 155.9,58.8 163.6,56.5 169.5,54.1 176.7,51.3 184.4,49.2 192,46.6 199.8,44.7 207.3,42.1 213.5,40.3 221,37.6 227.4,35 234.9,32.1 241.9,30.3 248.4,28.9 255.9,26 263.2,23 269.8,19.3 276.7,15.2 283.6,11.1 290.8,7.7 296.6,4.6 303.4,1.6 310.9,-1.1 318.1,-4.5"/>
+        <polyline class="samp-lo" points="36,100 43.1,100 49.4,100.6 57.4,100.8 65.4,100.7 73.4,101.3 80.5,102.5 88.3,104.3 96,106.6 103.4,109.2 111.1,110.5 116.2,111.1 124.1,112.3 131.9,113.8 139.6,115.9 146.8,117.7 154.6,119.7 160.9,121.8 168.3,124.8 175.6,128.2 182.1,132.1 189,136.2 193.8,139.6 200.5,143.9 206.7,148.2 213.5,152.5 220,157.1 225.5,162.7 230,168.9 234.6,175.5 238.7,181 243.7,187.2 249.1,193.1 254.8,198.7 259.1,202.5 265.3,207.6 270.9,212.4 276.4,216.7 282.7,221.6 288.3,226 294.7,230.9"/>
+        <polyline class="samp-lo" points="36,100 43.5,100 51.5,99.6 59.4,100.4 67.2,102.1 75,103.3 83,103.5 90.8,103.3 98,102.8 106,102 112.8,102.1 120.8,101.9 128,101.1 135.8,99.7 143.7,99.3 149.6,99.5 157.5,98.9 165.5,99.5 173.3,100.8 181,100.9 188.9,101.8 196.5,103.2 204.5,104.1 212.4,104.4 218.9,104.7 226.7,106.3 232.7,107.8 240.5,109.6 248.1,112.1 255.4,115.4 262.2,117.5 269.9,119.4 277.8,120.7 284.7,121.2 292.1,122.5 300.1,123.5 307.6,123.6 315.5,123.1 322.4,123.5 329.4,125 337.1,127.3"/>
+        <polyline class="samp-lo" points="36,100 42.2,100 49.7,100.3 57.3,99.5 65.3,98.7 73.3,99 81.3,99.5 87.4,100.4 95.1,102.5 101.4,104.2 108.1,106.6 115.3,110.2 122.9,112.7 130.8,113.7 138.8,114.7 146.8,114.4 154.8,114.5 162.8,114.6 169.2,113.8 176.3,112.7 184.1,110.8 192.1,111.1 200.1,111.2 208.1,111.5 216.1,111.9 223.9,113.6 231,115.6 238.4,117.2 245.4,118.4 253.4,119 260.8,119 268.7,118 275,117.1 281.3,116.2 289.2,115.6 297.2,115.3 305.2,115.8 313.1,117.1 320.7,118.4 327.7,121.3 333.5,124.6"/>
+        <polyline class="samp-lo" points="36,100 42.6,100 49.2,100 57.2,100 64.2,98.9 72.2,98.3 79.8,96.9 87.2,96.4 93.9,97.2 101.8,97.7 109.8,98.4 117.7,99.5 125.2,102.3 132.8,104.8 140.3,107.6 147.5,111.2 154,114.5 160.7,118.9 166.7,123.5 172.7,128.8 179.2,133.5 185.5,138.1 192.2,141.7 198.9,146 205.2,151 212.2,154.8 218.6,159.6 225.2,163.2 231.7,167.8 238.6,171.9 245.2,176.4 252.4,179.9 260.2,181.8 268.1,182.9 276.1,183.6 283.4,184.6 291.4,184.9 298.9,183.6 306.4,182.5 314.4,182.3 322.2,180.5"/>
+        <polyline class="samp-lo" points="36,100 42.5,100 49.6,101.2 57.5,102.5 64.1,103.6 70.8,104.7 77.2,105.5 83.6,107.5 91.4,109.5 99.3,110.2 107.3,111 112.9,111.9 117.8,112.8 124.4,113.1 132.4,113.7 140.3,115 145.5,116.9 151.3,118 159.3,118.4 167.2,118.9 175.1,117.7 183.1,116.8 189.7,115.6 197.7,115.2 205.3,115.7 213.3,116.2 220.9,116.3 226.6,116 234.6,116.4 242.5,117.3 250.5,118.2 258,119.3 264.7,120.5 272.6,121.3 279.9,121.1 287.8,122.5 295.8,122.8 303.6,122.9 309.2,122.9 317.1,122.5 323.8,121.6"/>
+        <polyline class="samp-lo" points="36,100 44,100 48.6,99.9 56,99.2 63.9,97.5 71.7,96 78.8,93.7 86.5,91.4 94.2,89.3 101.8,87.6 109.5,85.4 116.9,82.5 123.8,79.7 130.3,77.5 136.7,76.3 143,75 150.9,73.6 158.8,72.4 166.7,71.6 174.7,71.5 182,71.7 189.9,71.5 197.9,70.6 205.8,69.7 213.7,68.5 219.8,67.7 226.1,66.9 233.6,66.9 241,66.3 248.9,65.2 255.9,63.2 263.5,61.4 271.2,59.5 279.2,58.3 287,56.9 294.3,55.6 301.8,53.8 309.6,52 317.1,49.8 323.8,48.1 330.4,46.1"/>
+        <polyline class="samp-lo" points="36,100 44,100 52,99.6 58.6,98.4 65.3,96.6 72.6,96 79.2,95.6 87.1,94.3 95.1,93.8 100.5,94.3 107.7,96.8 115.6,97.8 121.9,99.3 129.5,100.9 137.1,103.4 142.9,105 150.6,105.8 155.6,107.1 163.3,109.2 170.1,111.6 175.5,114.8 180.2,118.2 185.2,121.8 192.2,125.6 198.8,128.1 205.6,130.8 212.1,134.7 217.6,137.5 224.8,141.1 229.2,143.4 235.8,147.9 241.7,151.9 249,155.1 256.7,157.1 264.7,158.1 271.2,158.5 279.1,159.3 287,160.1 294.8,160.7 302.5,161 310.5,161.7"/>
+        <polyline class="samp-lo" points="36,100 44,100 52,100.3 60,100 67.7,98.2 75,96.8 82.9,95.6 90.9,94.5 98,93.3 105.6,91.1 113.2,88.5 121.2,87.6 128.7,86.4 136.5,84.6 144.2,82.3 151.3,79.9 158.7,77.4 165.1,74.8 171.6,72.5 179.5,71.2 187.4,70 195.4,69.6 203.2,67.8 210.6,66.1 217.4,63.3 225.1,61.2 232.5,60.1 240.4,58.5 248.3,58.2 256.3,58.4 263.6,59.9 271.5,61.1 279.1,63.7 286.6,66.3 292.8,69.7 300,73.2 307.5,75.8 313.9,78 321.2,81.2 328.7,84.1 336.4,86.3"/>
+        <polyline class="samp-lo" points="36,100 44,100 52,99.3 60,99.1 67.7,98.6 75,98.7 82.9,99.8 90.5,101.1 97.7,102.8 105.7,103.2 113.7,103 120.7,104.5 127.9,106.2 135.2,108.4 141.6,110.5 149.3,112.8 156.8,115 164.6,116.9 170.4,118.9 178.2,120.3 185.9,121.8 192.2,122.2 200.2,122.8 208.2,123.1 216.1,124 224.1,124.1 231,124 239,124.2 246.7,124 254.7,123.5 262.7,124.2 270.6,125.5 277.4,127.4 285.3,128.8 293.2,130.1 301,131.9 307.8,134 315.4,136.4 322.3,140.4 329.2,144.6 336.6,147.7"/>
+        <polyline class="samp-lo" points="36,100 42.8,100 50.7,100.7 58.7,101 66.4,99 72.7,97.8 78.8,95 84.2,92.1 90.8,87.6 97.8,83.8 104.5,79.4 111.2,75.9 118.7,73.1 125.7,69.3 133,66 140.4,63 146.7,60 152,57.9 159.8,56 167.5,53.8 175.1,51.4 181.4,48.4 188.4,45.8 195.4,42.7 202.4,38.9 209.6,35.5 216.9,32.1 223.9,28.8 230.7,26.3 238.6,24.7 245.1,22.8 252.1,21.6 260.1,21 268,19.7 275.9,18.9 280.9,18.6 288.9,19.1 296.7,20.7 304.3,23.4 311.4,27 315.8,28.7"/>
+        <polyline class="samp-lo" points="36,100 44,100 51.5,100.5 58.4,101.1 66.3,101.8 72,103.2 79.9,104.9 87.5,107.5 93.4,109.5 100.1,112.2 107.6,114.8 115.6,115.3 123.1,116.6 131,118.1 136.9,118 144.6,118.6 152.5,119.4 160.1,120.2 168.1,120.8 173.9,122.3 181.7,124 188.7,125 196.6,124.2 204.6,123.4 211.7,123.2 218.3,122.8 226.1,124.5 233,125.7 240.3,125.9 248.3,126.1 255.7,126.3 263.7,126.7 271.7,127 278.9,128.2 285.6,128.2 292.9,128.6 300.9,129.4 308.9,128.8 316.9,128.2 324.9,128 332.7,126.4"/>
+        <polyline class="samp-mid" points="36,100 43,100 49.4,99.3 57,97.8 65,97.9 73,97.8 80.9,98.5 88.2,99.2 95.3,99.8 102.9,102 110.6,104.5 118.1,107.1 124.5,108.6 130.9,111 138.6,113.2 146,116.3 151.4,118.8 158.3,122.6 164.4,125 171.3,127.2 178.7,127.6 185.9,127.6 193.8,127 201.7,125.6 208.9,124.8 216.9,124 224.6,122.2 230.6,121 238.1,119.4 244.7,117.9 252.2,115.8 258.5,114.3 266.3,112.5 274,110.6 281.4,108.7 288.1,107.5 295.3,105.6 302,104.7 308.3,104.7 316.3,105.6 323,105.8"/>
+        <polyline class="samp-mid" points="36,100 44,100 51.9,98.9 59.9,97.9 67.9,98 75.8,98.5 83.2,98.9 91.2,98.5 99.2,98.9 107,99.1 114,100 119.8,100.7 127.5,102.7 135.2,105 142.2,108.3 149.1,112.3 155.3,117.4 160.4,123.5 166.3,129 170.8,132.3 177.4,136.6 184,141.1 191.1,144.6 198.2,148.3 205.1,151.4 212.7,153.9 220.4,156.1 228.1,157.1 236,158.2 243.6,159.3 251.5,160.3 256.9,161.6 262.8,163.7 270.2,165.6 277.5,168.9 285.2,171.2 292,173.1 299.9,174.2 307.9,174.7 315.2,174.6 323,173.1"/>
+        <polyline class="samp-mid" points="36,100 41.2,100 47.8,100.3 55.8,100.1 62.3,101.3 70,103.3 76.5,105.4 82.1,106.9 88.9,109.5 95,112.2 102.4,115.4 109.7,118.7 116.6,122.5 123.4,126.6 128.7,130.6 135.4,135 142.3,139.1 149.4,142.7 157.2,144.7 162.4,145.4 169.9,146.1 177.9,146.9 185.8,146 192.1,145.1 199.3,144.3 207.1,142.5 214.8,140.3 221.8,138.5 229.4,136.1 235.4,132.9 241,129.8 247.3,125.9 254.4,122.3 261.7,119 268.2,115.2 275.1,111.3 281.9,107.2 288.1,102.4 294,98 299.3,92.6 305.2,87.2"/>
+        <polyline class="samp-mid" points="36,100 43.5,100 51.5,100.3 59.4,101.1 66.1,102.4 73.8,104.7 81.2,107.5 89,109.4 95.4,110.7 103.3,112 111.1,113.6 118.7,114.3 126.5,116.3 134.3,117.9 142.2,118.9 150.1,120.4 157,122.4 163.6,123.9 171,126.2 178.4,129.2 185.5,132 191.6,135.3 197.6,138.7 205.3,141 212.8,143.7 219.8,145.5 227.3,148.2 234.8,150.9 242.3,153.7 249.7,156.7 257.4,159.1 265.3,159.8 272.6,160.5 280.6,160.2 287,159.7 293.4,158.8 301.4,157.9 309.4,157.6 317.1,157.5 325.1,158 333.1,158.4"/>
+        <polyline class="samp-mid" points="36,100 44,100 52,99.6 60,98.9 68,98.7 75.9,99 83.9,99 91.9,99.1 98.5,99.3 106.1,101.4 112.2,105 118.5,108.5 124.8,111.7 132.3,114.3 139.7,116.3 147.4,118.2 153.7,119.7 160.9,122.6 168.6,124.9 176.1,127.7 183.7,130.1 191.4,132.3 199.1,134.3 207,135.6 213.2,137 220.7,138.9 227.8,141.4 233.5,143.7 240.8,145.2 247.1,146.8 253,147.6 261,147.9 269,147.7 276.1,146.9 283,146.9 290.3,146.6 297.7,145.1 305.1,144.1 313,143 320.5,142.6 328.4,141.9"/>
+        <polyline class="samp-mid" points="36,100 41.7,100 49.4,102 57.3,103.1 65.3,103.8 73.3,104 81.3,104.6 89.2,105.4 97.2,105.4 105.2,106.1 112.4,108.2 118.5,109.4 126.3,111.5 134.2,112.5 139.9,113.6 146.5,115.1 154.3,117.1 161.3,120.9 168.8,123.8 174,126.2 180.5,129.5 188.2,131.9 195.8,134.3 203.6,136.1 210.4,137.3 218.4,138.2 224.9,138.7 231.8,138.5 238.4,138.5 246.4,138 253.9,138.2 261.8,137.4 267.1,138 275.1,138.9 283.1,139.4 289.1,139.6 295.2,139.9 303.1,139.1 309.7,137.1 317.4,135.1 324.8,134.7"/>
+        <polyline class="samp-hi" points="36,100 44,100 52,99.5 59.1,99.7 66.6,100.3 73.9,100.3 81.6,100.8 89.5,102.1 96.8,105.2 104.5,107.6 111.9,110 119.4,112.6 126.8,115.9 133.9,119.6 140.4,123 146.7,127.2 152.4,131 159.7,134.2 166.9,137.7 174,141.3 178.2,142.6 185.9,144.9 193.8,146 201.8,146.3 209.3,145.8 216.4,145.5 224.4,145.6 230.7,144.7 237,143.8 244.9,142.8 250.9,143.3 257.6,143.9 265.5,142.7 273.3,140.9 279.3,138.4 286.6,135.1 294.2,132.8 301.5,130.5 308.5,126.7 315.4,122.8 322.5,119.1"/>
+        <polyline class="samp-hi" points="36,100 44,100 52,100.4 60,100.9 67.9,101.7 75.5,103.7 83.2,106.1 88.6,108.8 95.9,111.3 103.7,113 111.5,114.7 118.6,116.1 126.4,117.5 134.3,118.8 141.6,119.8 149.5,121.1 156.8,122.4 164.3,124.8 171.7,128 178.8,131.5 185.5,134.7 191.6,137.9 199.3,140.1 206.9,142.5 214.4,145.2 222.1,147.6 229.9,149.1 237.6,149.2 245.5,148.5 251.6,148.3 259.6,148.2 267,147.3 274.9,146.1 282.7,144.3 290.5,142.6 298,139.6 303.5,136.4 309.9,131.7 316.3,126.8 322.5,123.5 329.9,120.6"/>
+        <circle class="ps" cx="200" cy="94" r="46"/>
+        <circle class="person" cx="200" cy="94" r="12"/>
+        <polyline class="mean" points="36,100 43.6,100 51.5,100.3 59.3,100.6 67,101.2 74.7,102.3 82.5,103.8 89.3,105.6 96.6,107.4 104.4,109.1 111.9,111.3 118.9,113 126.5,115.2 134.2,117.2 141.2,119 148.7,121.2 155.6,123.3 162.9,126.1 170.3,129.1 177.2,132.2 183.7,134.7 190.5,137.4 198.2,139.4 206,140.9 213.4,142.4 221,143.7 228.7,144.8 235.8,145.1 243.2,144.9 250.2,144.9 257.5,145.1 264.9,144.8 272.5,144.2 280.3,143 287.6,141.7 294.9,139.8 301.6,137.7 308.9,134.9 316,131.7 323.1,129.2 330.6,127"/>
+        <path class="goal" d="M357 93l14 14M371 93l-14 14"/>
+        <circle class="robot" cx="36" cy="100" r="10"/>
+        <line class="heading" x1="36" y1="100" x2="50" y2="100"/>
+        <text class="t-2" x="200" y="40" text-anchor="middle">人</text>
+        <text class="t-2" x="364" y="128" text-anchor="middle">ゴール</text>
+        <text class="t-2" x="36" y="128" text-anchor="middle">ロボット</text>
+        </svg>
+      </div>
+    </div>
+    <div class="key-row" aria-hidden="true">
+      <span class="key"><span class="key-line mpc"></span>MPC の予測軌跡（点は 0.4&nbsp;秒ごと）</span>
+      <span class="key"><span class="key-line samp"></span>MPPI の候補（濃いほど重みが大きい）</span>
+      <span class="key"><span class="key-line mean"></span>候補の重みつき平均</span>
+      <span class="key"><span class="key-dot"></span>人（点線の内側に入ると罰）</span>
+    </div>
+  </div>
+  <figcaption><span class="fig-num">図 1</span>同じ「人をよけてゴールへ向かう」問題を 2&nbsp;通りで解いた例。MPC は微分を使って入力の列を少しずつ直し、1&nbsp;本の最適な計画にする。MPPI は、まっすぐ進む案のまわりに入力をばらまいた候補をモデルで走らせ、コストの低い候補ほど重くして平均する。人にぶつかる候補や遠回りの候補は重みがほぼ 0（灰色）になり、平均した計画（太線）は人をよける。どちらもこの資料で計算した 8&nbsp;秒先までの予測。</figcaption>
+</figure>
+
+<dl class="meta">
+  <dt>対象</dt><dd>高校数学（数学 I・II・III・B）まで。行列と偏微分は使わない</dd>
+  <dt>例</dt><dd>1&nbsp;次元の台車で手計算し、2&nbsp;輪ロボットで MPPI を動かす</dd>
+  <dt>動く図</dt><dd>図 5（入力の上限）、図 9（MPPI の重み）、図 10（MPPI のデモ）</dd>
+  <dt>関連</dt>
+  <dd class="links">
+    <a href="https://homes.cs.washington.edu/~bboots/files/InformationTheoreticMPC.pdf">MPPI の論文（Williams et al., ICRA 2017）</a>
+    <a href="https://docs.ros.org/en/jazzy/p/nav2_mppi_controller">Nav2 MPPI Controller</a>
+  </dd>
+</dl>
+
+<details class="toc-mobile">
+  <summary>目次</summary>
+  <nav class="toc" aria-label="目次">
+    <ol>
+      <li><a href="#summary">要点</a></li>
+      <li><a href="#tools">使う高校数学</a></li>
+      <li><a href="#model">モデル：漸化式で書く</a></li>
+      <li><a href="#cost">コスト：計画の点数</a></li>
+      <li><a href="#receding">1&nbsp;手だけ実行して計画し直す</a></li>
+      <li><a href="#mpc">MPC：平方完成で解く</a></li>
+      <li><a href="#constraint">入力の上限と定義域</a></li>
+      <li><a href="#nonlinear">2&nbsp;輪ロボットと勾配降下法</a></li>
+      <li><a href="#mppi">MPPI：ばらまいて平均する</a></li>
+      <li><a href="#temperature">温度 λ の役割</a></li>
+      <li><a href="#sequence">何手も先を予測する MPPI</a></li>
+      <li><a href="#demo">MPPI を動かす</a></li>
+      <li><a href="#why-exp">なぜ指数関数か（発展）</a></li>
+      <li><a href="#link">MPC とのつながり（発展）</a></li>
+      <li><a href="#compare">MPC と MPPI の比較</a></li>
+      <li><a href="#nav2">Nav2 のパラメータ</a></li>
+      <li><a href="#notation">記号の一覧</a></li>
+      <li><a href="#glossary">用語集</a></li>
+      <li><a href="#refs">参考文献</a></li>
+    </ol>
+  </nav>
+</details>
+
+<section id="summary">
+  <h2>要点</h2>
+  <p class="lead">MPC と MPPI は、どちらも「先を予測して、いちばん良い動かし方を選ぶ」制御。押さえるべき点は次の 5&nbsp;つ。</p>
+  <ol>
+    <li>どちらも「モデルで未来を予測する → コストで採点する → いちばん良い入力の列を選ぶ → 最初の 1&nbsp;手だけ実行する → また計画し直す」をくり返す。違うのは<strong>いちばん良い入力の探し方</strong>だけ。</li>
+    <li>1&nbsp;次元の台車でコストを 2&nbsp;乗の和にすると、コストは入力の 2&nbsp;次関数になる。MPC の答えは<strong>平方完成</strong>で求まり、1&nbsp;手先だけ見るなら「ずれに比例した入力」（P 制御）になる。</li>
+    <li>入力に上限があると「定義域つきの 2&nbsp;次関数の最小値」になる。頂点が範囲の外なら、範囲の端を選ぶ。</li>
+    <li>2&nbsp;輪ロボットや「ぶつかったら罰」のコストが入ると平方完成できない。MPC は<strong>微分（傾き）</strong>を使って少しずつ谷を下る。MPPI は微分を使わず、<strong>正規分布</strong>でばらまいた候補を走らせ、<strong>指数関数</strong> \(e^{-S/\lambda}\) の重みで平均する。</li>
+    <li>温度 \(\lambda\) は「コストの低い候補をどれだけ信じるか」。小さいと最良の候補だけ、大きいとただの平均になる。候補が十分多ければ、MPPI の 1&nbsp;回の更新は勾配降下法の 1&nbsp;歩とほぼ同じになる（発展）。</li>
+  </ol>
+</section>
+
+<section id="tools">
+  <h2>この資料で使う高校数学</h2>
+  <p>新しい道具はいらない。使うのは次の範囲だけで、行列と偏微分は使わない。変数が 2&nbsp;つ以上ある所は「1&nbsp;文字だけ動かし、ほかは定数とみる」で済ませる。</p>
+  <div class="table-wrap">
+    <table class="stack">
+      <thead><tr><th scope="col">道具</th><th scope="col">科目</th><th scope="col">この資料での役目</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">漸化式・数列</th><td data-label="科目" class="nowrap">数学 B</td><td data-label="役目">ロボットの動き（モデル）を書く。目標に近づく速さを等比数列で表す</td></tr>
+        <tr><th scope="row">\(\Sigma\) 記号</th><td data-label="科目" class="nowrap">数学 B</td><td data-label="役目">各時刻のコストを合計する</td></tr>
+        <tr><th scope="row">2&nbsp;次関数と平方完成</th><td data-label="科目" class="nowrap">数学 I</td><td data-label="役目">MPC の答え（コストが最小になる入力）を求める</td></tr>
+        <tr><th scope="row">定義域つきの最小値</th><td data-label="科目" class="nowrap">数学 I</td><td data-label="役目">入力の上限（制約）を扱う</td></tr>
+        <tr><th scope="row">微分と接線の傾き</th><td data-label="科目" class="nowrap">数学 II・III</td><td data-label="役目">勾配降下法。MPPI と勾配のつながり</td></tr>
+        <tr><th scope="row">三角関数</th><td data-label="科目" class="nowrap">数学 II</td><td data-label="役目">2&nbsp;輪ロボットの動き</td></tr>
+        <tr><th scope="row">指数関数と指数法則</th><td data-label="科目" class="nowrap">数学 II・III</td><td data-label="役目">MPPI の重み \(e^{-x}\)</td></tr>
+        <tr><th scope="row">期待値と正規分布</th><td data-label="科目" class="nowrap">数学 B</td><td data-label="役目">MPPI のランダムな候補と、重みつき平均</td></tr>
+        <tr><th scope="row">自然対数と \(\log x \le x - 1\)</th><td data-label="科目" class="nowrap">数学 III</td><td data-label="役目">なぜ指数関数の重みなのか（発展）</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="model">
+  <h2>モデル：動きを漸化式で書く</h2>
+  <p>いちばん簡単な例から始める。まっすぐなレールの上を動く台車（1&nbsp;次元のロボット）を考え、位置を \(x\)［m］、速度の指令を \(u\)［m/s］とする。制御では、位置のように「今の様子」を表す量を<strong>状態</strong>、速度の指令のように「こちらが決められる量」を<strong>入力</strong>と呼ぶ。</p>
+  <p>コンピュータは時間を連続的には扱わず、一定の時間 \(\Delta t\)（たとえば 0.1&nbsp;秒）ごとに状態を測り、入力を決める。\(n\) ステップ目の位置を \(x_n\)、入力を \(u_n\) と書くと、速度 \(u_n\) で \(\Delta t\) 秒進むので</p>
+  <div class="eq key-eq">\[ x_{n+1} = x_n + u_n\,\Delta t \]</div>
+  <p>となる。これは数列の<strong>漸化式</strong>そのものだ。\(u_n\) が一定なら、公差 \(u\,\Delta t\) の等差数列になる。このように「今の状態と入力から、次の状態を計算する式」を<strong>モデル</strong>と呼ぶ。</p>
+
+  <figure>
+    <div class="fig">
+      <svg class="diagram narrow" viewBox="0 30 400 122" role="img" aria-label="数直線上の台車の位置。x0 = 0 から、u0 Δt = 1 で x1 = 1、u1 Δt = 2 で x2 = 3、u2 Δt = 0.5 で x3 = 3.5 へ進む。目標 g は 4。">
+        <defs>
+          <marker id="m-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill: var(--ink-2)"/></marker>
+        </defs>
+        <g style="color: var(--ink-2)">
+          <line class="ground" x1="24" y1="104" x2="384" y2="104"/>
+          <g class="t-sub" text-anchor="middle">
+            <line class="ground" x1="40" y1="100" x2="40" y2="108"/><text x="40" y="124">0</text>
+            <line class="ground" x1="116" y1="100" x2="116" y2="108"/><text x="116" y="124">1</text>
+            <line class="ground" x1="192" y1="100" x2="192" y2="108"/><text x="192" y="124">2</text>
+            <line class="ground" x1="268" y1="100" x2="268" y2="108"/><text x="268" y="124">3</text>
+            <line class="ground" x1="344" y1="100" x2="344" y2="108"/><text x="344" y="124">4</text>
+          </g>
+          <text class="t-sub" x="384" y="124" text-anchor="end">［m］</text>
+          <path class="line-2" d="M44 86Q78 52 112 86" marker-end="url(#m-arr)"/>
+          <path class="line-2" d="M120 86Q192 36 264 86" marker-end="url(#m-arr)"/>
+          <path class="line-2" d="M272 88Q287 66 302 88" marker-end="url(#m-arr)"/>
+        </g>
+        <text class="t" x="78" y="60" text-anchor="middle"><tspan class="mi">u</tspan><tspan class="mn" font-size="9.5" dy="3">0</tspan><tspan dy="-3">Δ</tspan><tspan class="mi">t</tspan> = 1</text>
+        <text class="t" x="192" y="52" text-anchor="middle"><tspan class="mi">u</tspan><tspan class="mn" font-size="9.5" dy="3">1</tspan><tspan dy="-3">Δ</tspan><tspan class="mi">t</tspan> = 2</text>
+        <text class="t" x="282" y="66" text-anchor="middle"><tspan class="mi">u</tspan><tspan class="mn" font-size="9.5" dy="3">2</tspan><tspan dy="-3">Δ</tspan><tspan class="mi">t</tspan> = 0.5</text>
+        <circle class="dot-ink" cx="40" cy="104" r="5"/>
+        <circle class="dot-ink" cx="116" cy="104" r="5"/>
+        <circle class="dot-ink" cx="268" cy="104" r="5"/>
+        <circle class="dot-ink" cx="306" cy="104" r="5"/>
+        <g class="t" text-anchor="middle">
+          <text x="40" y="145"><tspan class="mi">x</tspan><tspan class="mn" font-size="9.5" dy="3">0</tspan></text>
+          <text x="116" y="145"><tspan class="mi">x</tspan><tspan class="mn" font-size="9.5" dy="3">1</tspan></text>
+          <text x="268" y="145"><tspan class="mi">x</tspan><tspan class="mn" font-size="9.5" dy="3">2</tspan></text>
+          <text x="306" y="145"><tspan class="mi">x</tspan><tspan class="mn" font-size="9.5" dy="3">3</tspan></text>
+        </g>
+        <line class="line-ink" x1="344" y1="104" x2="344" y2="70"/>
+        <path d="M344 70L364 76L344 82Z" style="fill: var(--ink)"/>
+        <text class="t" x="352" y="60" text-anchor="middle">目標 <tspan class="mi">g</tspan></text>
+      </svg>
+    </div>
+    <figcaption><span class="fig-num">図 2</span>漸化式 \(x_{n+1} = x_n + u_n\Delta t\) で位置を計算する。\(\Delta t = 1\)&nbsp;秒、\(x_0 = 0\) から入力を \(u_0 = 1,\ u_1 = 2,\ u_2 = 0.5\) とすると、位置は \(0 \to 1 \to 3 \to 3.5\) と決まる。</figcaption>
+  </figure>
+
+  <h3>予測：入力を決めれば未来が計算できる</h3>
+  <p>漸化式をくり返し使えば、入力の列 \(u_0, u_1, \dots\) を決めるだけで、未来の位置がすべて計算できる。</p>
+  <div class="eq">\[ \begin{aligned} x_1 &= x_0 + u_0\,\Delta t \\ x_2 &= x_1 + u_1\,\Delta t = x_0 + (u_0 + u_1)\,\Delta t \\ x_n &= x_0 + \Delta t \sum_{j=0}^{n-1} u_j \end{aligned} \]</div>
+  <p>何ステップ先まで予測するかを<strong>予測ホライズン</strong>と呼び、そのステップ数を \(N\) で表す。実際のロボットでは、\(\Delta t = 0.05\)&nbsp;秒、\(N = 56\)（2.8&nbsp;秒先まで）のような値を使う（Nav2 の MPPI の既定値）。この資料では、手計算しやすいように \(\Delta t = 1\)&nbsp;秒とする。</p>
+</section>
+
+<section id="cost">
+  <h2>コスト：計画に点数をつける</h2>
+  <p>次に、入力の列が良いか悪いかを 1&nbsp;つの数で表す。目標の位置を \(g\) として、次の \(J\) を<strong>コスト関数</strong>と呼ぶ。小さいほど良い計画だ。</p>
+  <div class="eq key-eq">\[ J = \sum_{n=1}^{N} (x_n - g)^2 \;+\; \rho \sum_{n=0}^{N-1} u_n^2 \]</div>
+  <ul>
+    <li>第 1&nbsp;項は、目標からのずれの 2&nbsp;乗の合計。予測した各時刻で目標に近いほど小さい。</li>
+    <li>第 2&nbsp;項は、入力の大きさの 2&nbsp;乗の合計。急に大きく動かすほど大きい。電池を節約したり、乗せた物をこぼさないようにしたりするためのブレーキ役。</li>
+    <li>\(\rho\)（ロー）は 2&nbsp;つの項のつり合いを決める正の数で、<strong>重み</strong>と呼ぶ。大きいほど穏やかな動きを好む。</li>
+  </ul>
+  <aside class="memo">
+    <p class="memo-title">なぜ 2&nbsp;乗なのか</p>
+    <ul>
+      <li>符号が消える。右にずれても左にずれても正の値になる。</li>
+      <li>大きなずれほど強く罰する。ずれが 2&nbsp;なら 4、3&nbsp;なら 9。</li>
+      <li>なめらかで微分しやすい。モデルが漸化式なら \(J\) は入力の 2&nbsp;次関数になり、平方完成で最小値が求まる。</li>
+    </ul>
+  </aside>
+  <p>例として、\(\Delta t = 1,\ \rho = 1\)、今の位置 \(x_0 = 0\)、目標 \(g = 4\)、2&nbsp;手先まで予測する（\(N = 2\)）場合に、3&nbsp;つの計画を採点してみる。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">計画</th><th scope="col" class="num">\(u_0,\ u_1\)</th><th scope="col" class="num">\(x_1,\ x_2\)</th><th scope="col" class="num">ずれの項</th><th scope="col" class="num">入力の項</th><th scope="col" class="num">\(J\)</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">A：ほどほど</th><td class="num">2, 2</td><td class="num">2, 4</td><td class="num">4 + 0</td><td class="num">4 + 4</td><td class="num"><strong>12</strong></td></tr>
+        <tr><th scope="row">B：一気に</th><td class="num">4, 0</td><td class="num">4, 4</td><td class="num">0 + 0</td><td class="num">16 + 0</td><td class="num">16</td></tr>
+        <tr><th scope="row">C：ゆっくり</th><td class="num">1, 1</td><td class="num">1, 2</td><td class="num">9 + 4</td><td class="num">1 + 1</td><td class="num">15</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>B は 1&nbsp;手で目標に着くが入力が大きすぎ、C は穏やかだが遅すぎる。3&nbsp;つの中では A がいちばん良い。では、A よりさらに良い計画はあるのか。それを数式で求めるのが MPC だ（答えは \(J = 9.6\) の計画で、<a href="#mpc">MPC の節</a>で求める）。</p>
+</section>
+
+<section id="receding">
+  <h2>1&nbsp;手だけ実行して、計画し直す</h2>
+  <p>コストが最小になる入力の列 \(u_0^*, u_1^*, \dots, u_{N-1}^*\) が求まっても、ロボットに送るのは<strong>最初の \(u_0^*\) だけ</strong>だ（右肩の \({}^*\) は「最適な値」の印）。\(\Delta t\) 秒たったら状態を測り直し、それを新しい \(x_0\) として、また \(N\) ステップ先まで計画する。予測する範囲が時間とともに先へずれていくので、これを<strong>Receding horizon</strong>（後退ホライズン）と呼ぶ。</p>
+  <figure>
+    <div class="fig">
+      <svg class="diagram narrow" viewBox="0 0 400 214" role="img" aria-label="Receding horizon の模式図。時刻 0、1、2 の各計画で 4 ステップ先まで予測するが、実行するのは最初の 1 ステップだけ。次の時刻には状態を測り直して、1 つ先にずらして計画し直す。">
+        <defs>
+          <marker id="m-arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill: var(--ink-2)"/></marker>
+        </defs>
+        <path class="line-2" d="M104 34V29H280V34"/>
+        <text class="t-2" x="192" y="21" text-anchor="middle">予測ホライズン <tspan class="mi">N</tspan> = 4</text>
+        <g class="t" text-anchor="start">
+          <text x="10" y="64">時刻 0 の計画</text>
+          <text x="10" y="126">時刻 1 の計画</text>
+          <text x="10" y="188">時刻 2 の計画</text>
+        </g>
+        <!-- 時刻 0 -->
+        <line class="line-mute" x1="148" y1="60" x2="280" y2="60"/>
+        <line class="exec" x1="104" y1="60" x2="148" y2="60"/>
+        <circle class="dot-mute" cx="192" cy="60" r="5"/><circle class="dot-mute" cx="236" cy="60" r="5"/><circle class="dot-mute" cx="280" cy="60" r="5"/><circle class="dot-mute" cx="148" cy="60" r="5"/>
+        <circle class="dot-ink" cx="104" cy="60" r="6"/>
+        <text class="t-sub" x="126" y="50" text-anchor="middle">実行</text>
+        <!-- 時刻 1 -->
+        <line class="line-mute" x1="192" y1="122" x2="324" y2="122"/>
+        <line class="exec" x1="148" y1="122" x2="192" y2="122"/>
+        <circle class="dot-mute" cx="236" cy="122" r="5"/><circle class="dot-mute" cx="280" cy="122" r="5"/><circle class="dot-mute" cx="324" cy="122" r="5"/><circle class="dot-mute" cx="192" cy="122" r="5"/>
+        <circle class="dot-ink" cx="148" cy="122" r="6"/>
+        <text class="t-sub" x="170" y="112" text-anchor="middle">実行</text>
+        <!-- 時刻 2 -->
+        <line class="line-mute" x1="236" y1="184" x2="368" y2="184"/>
+        <line class="exec" x1="192" y1="184" x2="236" y2="184"/>
+        <circle class="dot-mute" cx="280" cy="184" r="5"/><circle class="dot-mute" cx="324" cy="184" r="5"/><circle class="dot-mute" cx="368" cy="184" r="5"/><circle class="dot-mute" cx="236" cy="184" r="5"/>
+        <circle class="dot-ink" cx="192" cy="184" r="6"/>
+        <text class="t-sub" x="214" y="174" text-anchor="middle">実行</text>
+        <!-- 測り直し -->
+        <g style="color: var(--ink-2)">
+          <line class="line-2" x1="148" y1="70" x2="148" y2="110" marker-end="url(#m-arr2)"/>
+          <line class="line-2" x1="192" y1="132" x2="192" y2="172" marker-end="url(#m-arr2)"/>
+        </g>
+        <text class="t-sub" x="156" y="94">測り直して計画し直す</text>
+      </svg>
+    </div>
+    <figcaption><span class="fig-num">図 3</span>Receding horizon。各時刻で \(N = 4\) ステップ先まで計画するが、実行するのは最初の 1&nbsp;ステップ（太線）だけ。次の時刻に状態を測り直し、予測する範囲を 1&nbsp;つ先にずらして計画し直す。</figcaption>
+  </figure>
+  <p>せっかく計画した残りを捨てるのはもったいなく見えるが、理由がある。モデルは現実と少しずれる（車輪がすべる、床が傾いている）し、人も動く。毎回測り直して計画し直せば、予測のずれを次の計画で取り戻せる。車の運転で、100&nbsp;m 先まで見て走り方を考えつつ、ハンドルは今の分だけ切り、また前を見直すのと同じだ。</p>
+  <p>MPC（Model Predictive Control、モデル予測制御）も MPPI も、ここまでの「モデル → 予測 → コスト → 最初の 1&nbsp;手だけ実行 → くり返し」という枠組みはまったく同じだ。違うのは「コストが最小になる入力の列をどう探すか」だけ。ここからは、その探し方を見ていく。</p>
+</section>
+
+<section id="mpc">
+  <h2><span class="mark mark-mpc" aria-hidden="true"></span>MPC：平方完成で谷底を求める</h2>
+  <p>MPC は、コストが最小になる入力の列を<strong>数式で</strong>求める。モデルが漸化式でコストが 2&nbsp;乗の和なら、コストは入力の 2&nbsp;次関数になるので、高校数学の平方完成で解ける。</p>
+
+  <h3>1&nbsp;手先だけ予測する（\(N = 1\)）</h3>
+  <p>いちばん簡単な \(N = 1\) から始める。入力は \(u_0\) の 1&nbsp;つだけなので、単に \(u\) と書く。今のずれを \(d = x_0 - g\) とおくと \(x_1 - g = d + u\,\Delta t\) なので、コストは</p>
+  <div class="eq">\[ J(u) = (d + u\,\Delta t)^2 + \rho\, u^2 \]</div>
+  <p>展開して \(u\) について整理すると、\(u\) の 2&nbsp;次関数になる。</p>
+  <div class="eq">\[ J(u) = (\Delta t^2 + \rho)\,u^2 + 2d\,\Delta t\,u + d^2 \]</div>
+  <p>\(u^2\) の係数 \(\Delta t^2 + \rho\) は正なので、グラフは下に凸の放物線で、頂点で最小になる。平方完成すると</p>
+  <div class="eq">\[ J(u) = (\Delta t^2 + \rho)\left(u + \frac{d\,\Delta t}{\Delta t^2 + \rho}\right)^{\!2} + \frac{\rho\, d^2}{\Delta t^2 + \rho} \]</div>
+  <p>よって、最適な入力は</p>
+  <div class="eq key-eq">\[ u^* = -\frac{\Delta t}{\Delta t^2 + \rho}\; d \]</div>
+  <p class="eq-note">微分で求めてもよい。\(J'(u) = 2(\Delta t^2 + \rho)\,u + 2d\,\Delta t = 0\) から同じ答えが出る。</p>
+  <p>例：\(\Delta t = 1,\ \rho = 1,\ x_0 = 0,\ g = 4\) なら \(d = -4\) で、\(J(u) = 2u^2 - 8u + 16 = 2(u - 2)^2 + 8\)。最適な入力は \(u^* = 2\)、そのときのコストは 8 になる。</p>
+
+  <h3>答えは「ずれに比例した入力」</h3>
+  <p>比例の係数を \(G = \dfrac{\Delta t}{\Delta t^2 + \rho}\) とおくと、答えは \(u^* = -G d\) と書ける。「目標からのずれに比例した大きさで、ずれを打ち消す向きに動かす」という形で、昔からある<strong>P 制御</strong>（比例制御）と同じだ。1&nbsp;手先だけ見る MPC は、P 制御と一致する。</p>
+  <ul>
+    <li>\(\rho\) を大きくすると \(G\) が小さくなり、穏やかに近づく。</li>
+    <li>\(\rho = 0\) なら \(G = 1/\Delta t\) で、1&nbsp;ステップで目標に飛び込む。ただし、ずれが大きいと入力がとても大きくなる。</li>
+  </ul>
+
+  <h3>くり返すと、等比数列で目標に近づく</h3>
+  <p>Receding horizon で毎ステップ \(u^*\) を計算して動かすと、1&nbsp;ステップ後のずれは</p>
+  <div class="eq">\[ d + u^*\,\Delta t = \left(1 - \frac{\Delta t^2}{\Delta t^2 + \rho}\right) d = \frac{\rho}{\Delta t^2 + \rho}\; d \]</div>
+  <p>になる。つまり、ずれは毎ステップ \(r = \dfrac{\rho}{\Delta t^2 + \rho}\) 倍になる。\(0 \le r < 1\) なので、ずれは公比 \(r\) の等比数列として 0 に近づき、\(m\) ステップ後のずれは \(r^m d\) だ。\(\Delta t = 1,\ \rho = 1\) なら \(r = \tfrac12\) で、位置は \(0 \to 2 \to 3 \to 3.5 \to 3.75 \to \cdots\) と、残りの半分ずつ近づく。</p>
+
+  <figure>
+    <div class="fig">
+      <div class="key-row" style="margin: 0 0 8px" aria-hidden="true">
+        <span class="key"><span class="key-line r1"></span>\(\rho = 0.25\)（\(r = 0.2\)）</span>
+        <span class="key"><span class="key-line r2"></span>\(\rho = 1\)（\(r = 0.5\)）</span>
+        <span class="key"><span class="key-line r3"></span>\(\rho = 4\)（\(r = 0.8\)）</span>
+        <span class="key"><span class="key-line ref"></span>目標</span>
+      </div>
+      <svg class="plot" viewBox="0 0 400 236" role="img" aria-label="1 手先だけ見る MPC をくり返したときの位置の変化。ρ = 0.25 では 1 ステップ後に 3.2 m、ρ = 1 では 2 m、ρ = 4 では 0.8 m まで進み、どれも目標 4 m に近づいていく。ρ が大きいほどゆっくり近づく。">
+        <line class="grid" x1="44" y1="152" x2="376" y2="152"/>
+        <line class="grid" x1="44" y1="108" x2="376" y2="108"/>
+        <line class="grid" x1="44" y1="64" x2="376" y2="64"/>
+        <line class="axis" x1="44" y1="196" x2="376" y2="196"/>
+        <line class="ref" x1="44" y1="20" x2="376" y2="20"/>
+        <text class="t-2" x="376" y="12" text-anchor="end">目標 <tspan class="mi">g</tspan> = 4</text>
+        <g class="tick" text-anchor="end">
+          <text x="36" y="200">0</text><text x="36" y="156">1</text><text x="36" y="112">2</text><text x="36" y="68">3</text><text x="36" y="24">4</text>
+        </g>
+        <g class="tick" text-anchor="middle">
+          <text x="44" y="214">0</text><text x="85.5" y="214">1</text><text x="127" y="214">2</text><text x="168.5" y="214">3</text><text x="210" y="214">4</text><text x="251.5" y="214">5</text><text x="293" y="214">6</text><text x="334.5" y="214">7</text><text x="376" y="214">8</text>
+        </g>
+        <text class="ax-lab" x="376" y="232" text-anchor="end">ステップ数（回）</text>
+        <text class="ax-lab" x="4" y="12">位置［m］</text>
+        <polyline class="line r1" points="44,196 85.5,55.2 127,27 168.5,21.4 210,20.3 251.5,20.1 293,20 334.5,20 376,20"/>
+<g><circle class="dot r1" cx="44" cy="196" r="4"><title>ρ = 0.25、0 ステップ後：x = 0.000 m</title></circle><circle class="dot r1" cx="85.5" cy="55.2" r="4"><title>ρ = 0.25、1 ステップ後：x = 3.200 m</title></circle><circle class="dot r1" cx="127" cy="27" r="4"><title>ρ = 0.25、2 ステップ後：x = 3.840 m</title></circle><circle class="dot r1" cx="168.5" cy="21.4" r="4"><title>ρ = 0.25、3 ステップ後：x = 3.968 m</title></circle><circle class="dot r1" cx="210" cy="20.3" r="4"><title>ρ = 0.25、4 ステップ後：x = 3.994 m</title></circle><circle class="dot r1" cx="251.5" cy="20.1" r="4"><title>ρ = 0.25、5 ステップ後：x = 3.999 m</title></circle><circle class="dot r1" cx="293" cy="20" r="4"><title>ρ = 0.25、6 ステップ後：x = 4.000 m</title></circle><circle class="dot r1" cx="334.5" cy="20" r="4"><title>ρ = 0.25、7 ステップ後：x = 4.000 m</title></circle><circle class="dot r1" cx="376" cy="20" r="4"><title>ρ = 0.25、8 ステップ後：x = 4.000 m</title></circle></g>
+<polyline class="line r2" points="44,196 85.5,108 127,64 168.5,42 210,31 251.5,25.5 293,22.8 334.5,21.4 376,20.7"/>
+<g><circle class="dot r2" cx="44" cy="196" r="4"><title>ρ = 1、0 ステップ後：x = 0.000 m</title></circle><circle class="dot r2" cx="85.5" cy="108" r="4"><title>ρ = 1、1 ステップ後：x = 2.000 m</title></circle><circle class="dot r2" cx="127" cy="64" r="4"><title>ρ = 1、2 ステップ後：x = 3.000 m</title></circle><circle class="dot r2" cx="168.5" cy="42" r="4"><title>ρ = 1、3 ステップ後：x = 3.500 m</title></circle><circle class="dot r2" cx="210" cy="31" r="4"><title>ρ = 1、4 ステップ後：x = 3.750 m</title></circle><circle class="dot r2" cx="251.5" cy="25.5" r="4"><title>ρ = 1、5 ステップ後：x = 3.875 m</title></circle><circle class="dot r2" cx="293" cy="22.8" r="4"><title>ρ = 1、6 ステップ後：x = 3.938 m</title></circle><circle class="dot r2" cx="334.5" cy="21.4" r="4"><title>ρ = 1、7 ステップ後：x = 3.969 m</title></circle><circle class="dot r2" cx="376" cy="20.7" r="4"><title>ρ = 1、8 ステップ後：x = 3.984 m</title></circle></g>
+<polyline class="line r3" points="44,196 85.5,160.8 127,132.6 168.5,110.1 210,92.1 251.5,77.7 293,66.1 334.5,56.9 376,49.5"/>
+<g><circle class="dot r3" cx="44" cy="196" r="4"><title>ρ = 4、0 ステップ後：x = 0.000 m</title></circle><circle class="dot r3" cx="85.5" cy="160.8" r="4"><title>ρ = 4、1 ステップ後：x = 0.800 m</title></circle><circle class="dot r3" cx="127" cy="132.6" r="4"><title>ρ = 4、2 ステップ後：x = 1.440 m</title></circle><circle class="dot r3" cx="168.5" cy="110.1" r="4"><title>ρ = 4、3 ステップ後：x = 1.952 m</title></circle><circle class="dot r3" cx="210" cy="92.1" r="4"><title>ρ = 4、4 ステップ後：x = 2.362 m</title></circle><circle class="dot r3" cx="251.5" cy="77.7" r="4"><title>ρ = 4、5 ステップ後：x = 2.689 m</title></circle><circle class="dot r3" cx="293" cy="66.1" r="4"><title>ρ = 4、6 ステップ後：x = 2.951 m</title></circle><circle class="dot r3" cx="334.5" cy="56.9" r="4"><title>ρ = 4、7 ステップ後：x = 3.161 m</title></circle><circle class="dot r3" cx="376" cy="49.5" r="4"><title>ρ = 4、8 ステップ後：x = 3.329 m</title></circle></g>
+        <text class="t" x="80" y="44" text-anchor="end"><tspan class="mi">ρ</tspan> = 0.25</text>
+        <text class="t" x="214" y="52"><tspan class="mi">ρ</tspan> = 1</text>
+        <text class="t" x="300" y="94"><tspan class="mi">ρ</tspan> = 4</text>
+      </svg>
+      <details class="proof" style="margin: 12px 0 0">
+        <summary>数値の表を見る</summary>
+        <div class="proof-body">
+          <div class="table-wrap" style="margin: 4px 0 10px">
+            <table>
+              <thead><tr><th scope="col">ステップ数</th><th scope="col" class="num">\(\rho = 0.25\)</th><th scope="col" class="num">\(\rho = 1\)</th><th scope="col" class="num">\(\rho = 4\)</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">0</th><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+                <tr><th scope="row">1</th><td class="num">3.2</td><td class="num">2</td><td class="num">0.8</td></tr>
+                <tr><th scope="row">2</th><td class="num">3.84</td><td class="num">3</td><td class="num">1.44</td></tr>
+                <tr><th scope="row">3</th><td class="num">3.968</td><td class="num">3.5</td><td class="num">1.952</td></tr>
+                <tr><th scope="row">4</th><td class="num">3.994</td><td class="num">3.75</td><td class="num">2.362</td></tr>
+                <tr><th scope="row">5</th><td class="num">3.999</td><td class="num">3.875</td><td class="num">2.689</td></tr>
+                <tr><th scope="row">6</th><td class="num">4.000</td><td class="num">3.938</td><td class="num">2.951</td></tr>
+                <tr><th scope="row">7</th><td class="num">4.000</td><td class="num">3.969</td><td class="num">3.161</td></tr>
+                <tr><th scope="row">8</th><td class="num">4.000</td><td class="num">3.984</td><td class="num">3.329</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+    </div>
+    <figcaption><span class="fig-num">図 4</span>1&nbsp;手先だけ見る MPC（\(\Delta t = 1,\ x_0 = 0,\ g = 4\)）を毎ステップくり返したときの位置。ずれは公比 \(r = \rho/(1 + \rho)\) の等比数列で小さくなる。\(\rho\) が大きいほど入力を控えるので、ゆっくり近づく。</figcaption>
+  </figure>
+
+  <h3>2&nbsp;手先まで予測する（\(N = 2\)）</h3>
+  <p>\(N = 2\) にすると、入力は \(u_0,\ u_1\) の 2&nbsp;つになる。手計算しやすいよう \(\Delta t = 1,\ \rho = 1\) とすると、\(x_1 - g = d + u_0\)、\(x_2 - g = d + u_0 + u_1\) なので</p>
+  <div class="eq">\[ J(u_0, u_1) = (d + u_0)^2 + (d + u_0 + u_1)^2 + u_0^2 + u_1^2 \]</div>
+  <p>2&nbsp;変数の 2&nbsp;次関数の最小値は、高校数学の「1&nbsp;文字を固定する」方法（いわゆる予選決勝法）で求まる。</p>
+  <p><strong>予選：\(u_0\) を固定して、\(u_1\) だけを動かす。</strong>\(a = d + u_0\) とおくと、\(u_1\) を含む部分は</p>
+  <div class="eq">\[ (a + u_1)^2 + u_1^2 = 2u_1^2 + 2a\,u_1 + a^2 = 2\left(u_1 + \frac{a}{2}\right)^{\!2} + \frac{a^2}{2} \]</div>
+  <p>なので、\(u_1 = -\dfrac{a}{2}\) のとき最小値 \(\dfrac{a^2}{2}\) をとる。</p>
+  <p><strong>決勝：その最小値を、\(u_0\) の関数として最小にする。</strong></p>
+  <div class="eq">\[ \begin{aligned} J &= (d + u_0)^2 + \frac{(d + u_0)^2}{2} + u_0^2 = \frac{5}{2}u_0^2 + 3d\,u_0 + \frac{3}{2}d^2 \\ &= \frac{5}{2}\left(u_0 + \frac{3}{5}d\right)^{\!2} + \frac{3}{5}d^2 \end{aligned} \]</div>
+  <p>よって \(u_0^* = -\dfrac{3}{5}d\)、\(u_1^* = -\dfrac{d + u_0^*}{2} = -\dfrac{1}{5}d\)。<a href="#cost">コストの節</a>の例（\(d = -4\)）なら \(u_0^* = 2.4,\ u_1^* = 0.8\) で、予測位置は \(x_1 = 2.4,\ x_2 = 3.2\)、コストは \(\tfrac35 \times 16 = 9.6\)。計画 A（12）より良い。</p>
+  <p>1&nbsp;手先だけ見たとき（\(u^* = 2\)）より、最初の一手が大きい（2.4）。2&nbsp;ステップ目のずれもコストに入るので、早めに近づいたほうが得になるからだ。このように、ホライズン \(N\) を変えると動き方も変わる。Receding horizon でくり返すと、ずれは毎ステップ \(1 - \tfrac35 = 0.4\) 倍になり、\(N = 1\) の 0.5 倍より速く縮む。</p>
+  <aside class="memo">
+    <p class="memo-title">変数が多いとき</p>
+    <p>\(N\) が大きいと、入力が \(N\) 個ある 2&nbsp;次関数の最小化になる。「ほかの入力を定数とみて、1&nbsp;つの入力で微分したものが 0」という式を \(N\) 本並べると、\(N\) 元の連立 1&nbsp;次方程式になる（さっきの予選・決勝は、これを 2&nbsp;本で解いたことにあたる）。コンピュータはこの連立方程式をすぐに解ける。大学では行列を使って書き、LQR や 2&nbsp;次計画法（QP）という名前で学ぶ。</p>
+  </aside>
+</section>
+
+<section id="constraint">
+  <h2>入力には上限がある：定義域つきの最小値</h2>
+  <p>実際のモーターには限界があり、速度は \(-u_{\max} \le u \le u_{\max}\) の範囲でしか出せない。このような条件を<strong>制約</strong>と呼ぶ。\(N = 1\) なら、これは「定義域が制限された 2&nbsp;次関数の最小値」の問題そのものだ。答えは軸（頂点）と定義域の位置関係で場合分けする。</p>
+  <ul>
+    <li>頂点 \(u = -Gd\) が範囲の中にあれば、頂点が答え。</li>
+    <li>頂点が範囲より右にあれば、右端 \(u_{\max}\) が答え（範囲の中では、右へ行くほど \(J\) が小さいから）。</li>
+    <li>頂点が範囲より左にあれば、左端 \(-u_{\max}\) が答え。</li>
+  </ul>
+  <p>まとめると「制約がないときの答えを求め、範囲からはみ出したら端で止める」だけでよい。\(\Delta t = 1,\ \rho = 1,\ u_{\max} = 1.5\) で \(x_0 = 0\) から \(g = 4\) を目指すと、最初は頂点が 2 で範囲の外なので \(u = 1.5\)。次は \(x = 1.5\) で頂点が 1.25 になり範囲の中、…と進み、位置は \(0 \to 1.5 \to 2.75 \to 3.375 \to 3.6875 \to \cdots\) と近づく。</p>
+  <figure id="fig-constraint">
+    <div class="fig">
+      <svg class="plot narrow" viewBox="0 0 400 236" role="img" aria-label="入力の上限があるときのコストの放物線。頂点が出せる範囲の外にあると、範囲の端の入力が選ばれる。" data-plot></svg>
+      <div class="controls">
+        <label for="c-d">今のずれ \(d\)</label>
+        <input id="c-d" type="range" min="-8" max="8" step="0.5" value="-4">
+        <output for="c-d" data-out="d">−4.0</output>
+        <label for="c-umax">上限 \(u_{\max}\)</label>
+        <input id="c-umax" type="range" min="0.5" max="4" step="0.25" value="1.5">
+        <output for="c-umax" data-out="umax">1.50</output>
+      </div>
+      <p class="ifig-note" data-note aria-live="polite"></p>
+      <noscript><p class="ifig-note">この図を動かすには JavaScript を有効にしてください。</p></noscript>
+    </div>
+    <figcaption><span class="fig-num">図 5</span>\(\Delta t = 1,\ \rho = 1\) のときのコスト \(J(u) = 2\left(u + \tfrac{d}{2}\right)^2 + \tfrac{d^2}{2}\)。最小になる場所に関係しない定数項 \(\tfrac{d^2}{2}\) は省いて描いた。青い帯が出せる入力の範囲 \(-u_{\max} \le u \le u_{\max}\)、白丸が放物線の頂点、青い点が選ばれる入力。目標より手前にいるとき（\(d < 0\)）は、頂点が右側にくる。</figcaption>
+  </figure>
+  <aside class="memo">
+    <p class="memo-title">\(N \ge 2\) で制約があると</p>
+    <p>入力どうしが互いに影響しあうので、制約がないときの答えを端で止めるだけでは最適にならないことがある。この場合は、制約つきの 2&nbsp;次関数の最小化（2&nbsp;次計画問題）を解く専用のプログラム（ソルバー）を使う。MPC が制約を正確に守れるのは、この計算をしているからだ。</p>
+  </aside>
+</section>
+
+<section id="nonlinear">
+  <h2>2&nbsp;輪ロボットでは平方完成できない</h2>
+  <p>配膳ロボットや掃除ロボットの多くは、左右の車輪の速さを変えて進む<strong>差動 2&nbsp;輪</strong>だ。状態は位置 \((x, y)\) と向き \(\theta\)、入力は前に進む速さ \(v\) と回る速さ（角速度）\(\omega\) で、モデルは三角関数を使って次のように書ける。</p>
+  <div class="eq key-eq">\[ \begin{aligned} x_{n+1} &= x_n + v_n \cos\theta_n\,\Delta t \\ y_{n+1} &= y_n + v_n \sin\theta_n\,\Delta t \\ \theta_{n+1} &= \theta_n + \omega_n\,\Delta t \end{aligned} \]</div>
+  <p>\(\Delta t\) 秒で進む距離 \(v_n\Delta t\) を、向き \(\theta_n\) に合わせて \(x\) 方向（\(\cos\)）と \(y\) 方向（\(\sin\)）に分けただけだ。</p>
+  <figure>
+    <div class="fig">
+      <svg class="diagram narrow" viewBox="0 0 400 232" role="img" aria-label="差動 2 輪ロボットのモデル。ロボットは向き θn の方向に vnΔt だけ進み、その x 成分は vn cos θn Δt、y 成分は vn sin θn Δt。進んだ先で向きが ωnΔt だけ回る。">
+        <defs>
+          <marker id="m-arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill: var(--ink)"/></marker>
+        </defs>
+        <line class="line-dash" x1="92" y1="182" x2="247.9" y2="182"/>
+        <line class="line-dash" x1="247.9" y1="182" x2="247.9" y2="92"/>
+        <line class="line-dash" x1="247.9" y1="92" x2="282.5" y2="72"/>
+        <g style="color: var(--ink)">
+          <line class="line-ink" x1="107.6" y1="173" x2="232.3" y2="101" marker-end="url(#m-arr3)"/>
+        </g>
+        <path class="line-2" d="M144 182A52 52 0 0 0 137 156"/>
+        <path class="line-2" d="M277.3 75A34 34 0 0 0 267.4 64.1"/>
+        <circle class="robot-a" cx="92" cy="182" r="16" style="fill: var(--surface); stroke: var(--ink); stroke-width: 2"/>
+        <line x1="92" y1="182" x2="116.2" y2="168" style="stroke: var(--ink); stroke-width: 2; stroke-linecap: round"/>
+        <circle cx="247.9" cy="92" r="16" style="fill: var(--surface); stroke: var(--ink-2); stroke-width: 2; stroke-dasharray: 4 3"/>
+        <line x1="247.9" y1="92" x2="264" y2="69.1" style="stroke: var(--ink-2); stroke-width: 2; stroke-linecap: round"/>
+        <g class="t">
+          <text x="150" y="172"><tspan class="mi">θ</tspan><tspan class="mi" font-size="9.5" dy="3">n</tspan></text>
+          <text x="284" y="62"><tspan class="mi">ω</tspan><tspan class="mi" font-size="9.5" dy="3">n</tspan><tspan dy="-3">Δ</tspan><tspan class="mi">t</tspan></text>
+          <text x="148" y="128" text-anchor="end"><tspan class="mi">v</tspan><tspan class="mi" font-size="9.5" dy="3">n</tspan><tspan dy="-3">Δ</tspan><tspan class="mi">t</tspan>（進む距離）</text>
+          <text x="170" y="202" text-anchor="middle"><tspan class="mi">v</tspan><tspan class="mi" font-size="9.5" dy="3">n</tspan><tspan dy="-3"> cos </tspan><tspan class="mi">θ</tspan><tspan class="mi" font-size="9.5" dy="3">n</tspan><tspan dy="-3"> Δ</tspan><tspan class="mi">t</tspan></text>
+          <text x="256" y="142"><tspan class="mi">v</tspan><tspan class="mi" font-size="9.5" dy="3">n</tspan><tspan dy="-3"> sin </tspan><tspan class="mi">θ</tspan><tspan class="mi" font-size="9.5" dy="3">n</tspan><tspan dy="-3"> Δ</tspan><tspan class="mi">t</tspan></text>
+        </g>
+        <g class="t-2" text-anchor="middle">
+          <text x="92" y="224">(<tspan class="mi">x</tspan><tspan class="mi" font-size="9.5" dy="3">n</tspan><tspan dy="-3">, </tspan><tspan class="mi">y</tspan><tspan class="mi" font-size="9.5" dy="3">n</tspan><tspan dy="-3">)</tspan></text>
+        </g>
+        <text class="t-2" x="226" y="80" text-anchor="end">(<tspan class="mi">x</tspan><tspan class="mi" font-size="9.5" dy="3">n</tspan><tspan font-size="9.5">+1</tspan><tspan dy="-3">, </tspan><tspan class="mi">y</tspan><tspan class="mi" font-size="9.5" dy="3">n</tspan><tspan font-size="9.5">+1</tspan><tspan dy="-3">)</tspan></text>
+      </svg>
+    </div>
+    <figcaption><span class="fig-num">図 6</span>差動 2&nbsp;輪ロボットのモデル。\(\Delta t\) 秒で進む距離 \(v_n\Delta t\) を、向き \(\theta_n\) に合わせて \(x\) 方向と \(y\) 方向に分ける（三角比）。向きは、角速度 \(\omega_n\) で \(\omega_n\Delta t\) だけ回る。</figcaption>
+  </figure>
+  <p>コストは、たとえば目標 \((g_x, g_y)\) までの距離の 2&nbsp;乗に、人とぶつかりそうなときの罰 \(C_{\text{obs}}\) を足したものにする。</p>
+  <div class="eq">\[ J = \sum_{n=1}^{N} \Big[ (x_n - g_x)^2 + (y_n - g_y)^2 + C_{\text{obs}}(x_n, y_n) \Big] + \rho \sum_{n=0}^{N-1} \left( v_n^2 + \omega_n^2 \right) \]</div>
+  <p>\(C_{\text{obs}}\) は、たとえば「人との距離が 0.55&nbsp;m 未満なら 1000、そうでなければ 0」のような罰だ。ところが、こうなると平方完成は使えない。</p>
+  <ul>
+    <li>\(\theta_n\) が \(\cos\) と \(\sin\) の中に入るので、\(J\) は入力の 2&nbsp;次関数ではなくなる。</li>
+    <li>人との距離による罰は、0.55&nbsp;m を境に 0 から 1000 へ急に跳ぶ。グラフが崖のような形になる。</li>
+  </ul>
+  <p>そこで、数式で一発で解くのはあきらめ、良い入力に少しずつ近づけていく。</p>
+
+  <h3>勾配降下法：坂を下る</h3>
+  <p>入力を少し動かしたとき \(J\) が減る向きは、微分 \(J'(u)\)、つまりグラフの接線の傾きでわかる。傾きが負なら右へ、正なら左へ動かせば \(J\) は減る。そこで</p>
+  <div class="eq key-eq">\[ u \leftarrow u - \alpha\, J'(u) \]</div>
+  <p>をくり返す（\(\leftarrow\) は「右辺の値で置きかえる」の意味）。\(\alpha\) は 1&nbsp;回に動かす量を決める正の数で、<strong>歩幅</strong>と呼ぶ。この方法を<strong>勾配降下法</strong>という。</p>
+  <p>例：\(J(u) = 2(u - 2)^2 + 8\) なら \(J'(u) = 4(u - 2)\) なので、1&nbsp;回の更新で</p>
+  <div class="eq">\[ u_{\text{new}} - 2 = (1 - 4\alpha)(u - 2) \]</div>
+  <p>となり、頂点からのずれは公比 \(1 - 4\alpha\) の等比数列になる。\(\alpha = 0.125\) なら公比 \(\tfrac12\) で、\(u = 0 \to 1 \to 1.5 \to 1.75 \to \cdots\) と頂点の 2 に近づく。\(0 < \alpha < 0.5\) なら収束するが、\(\alpha = 0.5\) だと 0 と 4 を往復し、\(\alpha > 0.5\) だと発散する。歩幅は大きすぎても小さすぎてもいけない。</p>
+  <p>入力が何個あっても考え方は同じで、ほかの入力を固定したときの傾きを使って、各入力を少しずつ動かす。実際の MPC では、勾配降下法を改良したニュートン法や逐次 2&nbsp;次計画法（SQP）などで、この計算を毎周期行っている。</p>
+
+  <h3>傾きに頼る方法の弱点</h3>
+  <figure>
+    <div class="fig">
+      <svg class="plot narrow" viewBox="0 0 400 222" role="img" aria-label="コストの谷が 2 つあるグラフ。左の谷のほうが低い。中央の山は人にぶつかる入力。少し右から出発した勾配降下法の点は、右の谷へ下りて止まる。">
+        <line class="axis" x1="24" y1="200" x2="376" y2="200"/>
+        <text class="ax-lab" x="24" y="14">コスト <tspan class="mi">J</tspan></text>
+        <g class="ax-lab">
+          <text x="28" y="217">← 左に切る</text>
+          <text x="200" y="217" text-anchor="middle">まっすぐ</text>
+          <text x="372" y="217" text-anchor="end">右に切る →</text>
+        </g>
+        <polyline class="curve" points="28.4,59.2 29.8,64.9 31.3,70.4 32.7,75.7 34.1,80.9 35.6,85.8 37,90.5 38.4,95.1 39.8,99.5 41.3,103.7 42.7,107.7 44.1,111.5 45.6,115.2 47,118.8 48.4,122.1 49.9,125.3 51.3,128.4 52.7,131.3 54.1,134 55.6,136.7 57,139.1 58.4,141.5 59.9,143.7 61.3,145.8 62.7,147.7 64.2,149.6 65.6,151.3 67,152.9 68.4,154.4 69.9,155.7 71.3,157 72.7,158.2 74.2,159.2 75.6,160.2 77,161 78.5,161.8 79.9,162.5 81.3,163.1 82.7,163.6 84.2,164 85.6,164.4 87,164.7 88.5,164.9 89.9,165 91.3,165.1 92.8,165 94.2,165 95.6,164.8 97,164.7 98.5,164.4 99.9,164.1 101.3,163.8 102.8,163.4 104.2,162.9 105.6,162.4 107.1,161.9 108.5,161.3 109.9,160.7 111.3,160 112.8,159.4 114.2,158.6 115.6,157.9 117.1,157.1 118.5,156.3 119.9,155.5 121.4,154.6 122.8,153.8 124.2,152.9 125.6,152 127.1,151.1 128.5,150.1 129.9,149.2 131.4,148.2 132.8,147.2 134.2,146.3 135.7,145.3 137.1,144.3 138.5,143.3 139.9,142.3 141.4,141.3 142.8,140.4 144.2,139.4 145.7,138.4 147.1,137.4 148.5,136.4 149.9,135.5 151.4,134.5 152.8,133.6 154.2,132.7 155.7,131.7 157.1,130.8 158.5,129.9 160,129.1 161.4,128.2 162.8,127.4 164.2,126.5 165.7,125.7 167.1,124.9 168.5,124.2 170,123.4 171.4,122.7 172.8,122 174.3,121.3 175.7,120.7 177.1,120 178.6,119.4 180,118.9 181.4,118.3 182.8,117.8 184.3,117.3 185.7,116.8 187.1,116.4 188.6,115.9 190,115.5 191.4,115.2 192.9,114.8 194.3,114.5 195.7,114.3 197.1,114 198.6,113.8 200,113.6 201.4,113.4 202.9,113.3 204.3,113.2 205.7,113.1 207.2,113.1 208.6,113.1 210,113.1 211.4,113.1 212.9,113.2 214.3,113.3 215.7,113.4 217.2,113.6 218.6,113.7 220,113.9 221.4,114.2 222.9,114.4 224.3,114.7 225.7,115 227.2,115.3 228.6,115.7 230,116 231.5,116.4 232.9,116.8 234.3,117.3 235.8,117.7 237.2,118.2 238.6,118.7 240,119.2 241.5,119.7 242.9,120.3 244.3,120.8 245.8,121.4 247.2,122 248.6,122.6 250.1,123.2 251.5,123.8 252.9,124.4 254.3,125 255.8,125.6 257.2,126.3 258.6,126.9 260.1,127.6 261.5,128.2 262.9,128.8 264.4,129.5 265.8,130.1 267.2,130.7 268.6,131.3 270.1,131.9 271.5,132.5 272.9,133.1 274.4,133.7 275.8,134.2 277.2,134.8 278.6,135.3 280.1,135.8 281.5,136.3 282.9,136.7 284.4,137.1 285.8,137.5 287.2,137.9 288.7,138.2 290.1,138.5 291.5,138.8 293,139 294.4,139.2 295.8,139.3 297.2,139.4 298.7,139.5 300.1,139.5 301.5,139.4 303,139.3 304.4,139.1 305.8,138.9 307.2,138.6 308.7,138.3 310.1,137.9 311.5,137.4 313,136.9 314.4,136.2 315.8,135.5 317.3,134.7 318.7,133.9 320.1,132.9 321.6,131.9 323,130.8 324.4,129.6 325.8,128.2 327.3,126.8 328.7,125.3 330.1,123.7 331.6,122 333,120.1 334.4,118.2 335.9,116.1 337.3,113.9 338.7,111.6 340.1,109.2 341.6,106.6 343,103.9 344.4,101.1 345.9,98.1 347.3,95 348.7,91.8 350.1,88.4 351.6,84.8 353,81.1 354.4,77.2 355.9,73.2 357.3,69 358.7,64.6 360.2,60 361.6,55.3 363,50.4 364.5,45.3 365.9,40 367.3,34.6 368.7,28.9 370.2,23 371.6,16.9"/>
+<circle class="dot gd" cx="223.4" cy="114.5" r="4.5"/>
+<circle class="dot gd" cx="231.5" cy="116.5" r="4"/>
+<circle class="dot gd" cx="243.5" cy="120.5" r="4"/>
+<circle class="dot gd" cx="259.8" cy="127.5" r="4"/>
+<circle class="dot gd" cx="278.7" cy="135.3" r="4"/>
+<circle class="dot gd" cx="293.7" cy="139.1" r="4"/>
+<circle class="dot gd" cx="299.1" cy="139.5" r="4"/>
+        <circle class="hollow" cx="91.9" cy="165.1" r="5"/>
+        <text class="t-2" x="92" y="188" text-anchor="middle">左から回る（いちばん良い）</text>
+        <text class="t-2" x="300" y="180" text-anchor="middle">右から回る（局所解）</text>
+        <text class="t-2" x="200" y="153" text-anchor="middle">人にぶつかる</text>
+        <text class="t-2" x="220" y="98" text-anchor="middle">出発点</text>
+        <g style="color: var(--mpc)">
+          <path class="gd-arrow" d="M238 104Q268 100 288 124" marker-end="url(#m-arr4)"/>
+        </g>
+        <defs>
+          <marker id="m-arr4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill: var(--mpc)"/></marker>
+        </defs>
+      </svg>
+    </div>
+    <figcaption><span class="fig-num">図 7</span>コストの谷が 2&nbsp;つある例（横軸はハンドルの切り方の模式）。出発点が少し右にあると、勾配降下法（青い点）は右の谷に下りて止まり、より低い左の谷には行けない。</figcaption>
+  </figure>
+  <ul>
+    <li><strong>局所解</strong>：谷が 2&nbsp;つあると、出発点に近い谷に落ちて止まる。人を左から回るか右から回るかのように、答えの候補が離れて複数あるときに起こりやすい。</li>
+    <li><strong>崖のようなコスト</strong>：ぶつかる・ぶつからないで値が跳ぶコストは、平らな所では傾きが 0 で、どちらへ動けばよいかわからない。</li>
+    <li><strong>微分の手間</strong>：モデルとコストの微分を用意する必要がある。</li>
+  </ul>
+  <p>これらを、微分を使わずに乗り越えようとするのが MPPI だ。</p>
+</section>
+
+<section id="mppi">
+  <h2><span class="mark mark-mppi" aria-hidden="true"></span>MPPI：ばらまいて、重みつきで平均する</h2>
+  <p>MPPI（Model Predictive Path Integral control）は、傾きを計算するかわりに、<strong>入力をランダムにたくさん試す</strong>。1&nbsp;回の更新は次の 4&nbsp;段階でできている。</p>
+  <ol>
+    <li><strong>ばらまく</strong>：今の入力の案 \(u\) に、ランダムなゆらぎ \(\varepsilon^{(k)}\)（イプシロン）を足した候補を \(K\) 個つくる（\(k = 1, 2, \dots, K\)）。右肩の \((k)\) は「\(k\) 番目の候補」という意味で、累乗ではない。</li>
+    <li><strong>走らせる</strong>：各候補の入力でモデル（漸化式）を計算して、軌跡を予測する。これを<strong>ロールアウト</strong>と呼ぶ。</li>
+    <li><strong>採点する</strong>：各軌跡のコスト \(S^{(k)}\) を計算する。\(S\) は \(J\) と同じもので、MPPI の論文の記号に合わせた。</li>
+    <li><strong>重みつきで平均する</strong>：コストが低い候補ほど大きな重み \(w^{(k)}\) をつけて、ゆらぎを平均し、案に足す。</li>
+  </ol>
+  <div class="eq key-eq">\[ \begin{aligned} u_{\text{new}} &= u + \sum_{k=1}^{K} w^{(k)}\, \varepsilon^{(k)} \\[4pt] w^{(k)} &= \frac{\exp\!\left(-\dfrac{S^{(k)} - S_{\min}}{\lambda}\right)}{\displaystyle\sum_{j=1}^{K} \exp\!\left(-\dfrac{S^{(j)} - S_{\min}}{\lambda}\right)} \end{aligned} \]</div>
+  <p>\(S_{\min}\) は \(K\) 個のコストの最小値、\(\lambda\)（ラムダ）は<strong>温度</strong>と呼ばれる正の数、\(\exp(x)\) は \(e^x\) のこと。式は長いが、中身は「正規分布でばらまく」「指数関数で重みにする」「重みつき平均をとる」という 3&nbsp;つの高校数学でできている。順に見ていく。</p>
+
+  <h3>正規分布でばらまく</h3>
+  <p>ゆらぎ \(\varepsilon\) は、平均 0、標準偏差 \(\sigma\)（シグマ）の<strong>正規分布</strong> \(N(0, \sigma^2)\) に従う乱数でつくる（この \(N\) は正規分布の記号で、ホライズンの \(N\) とは別）。0 の近くがよく出て、大きな値はめったに出ない、つりがね型の分布だ。</p>
+  <ul>
+    <li>およそ 68% が \(-\sigma\) から \(\sigma\) の間に入る。</li>
+    <li>およそ 95% が \(-2\sigma\) から \(2\sigma\) の間に入る。</li>
+  </ul>
+  <p>\(\sigma\) は「今の案から、どのくらい離れた所まで探すか」を決める。小さいと近くしか探さず、大きいと遠くまで探せるが、的外れな候補も増える。</p>
+  <figure>
+    <div class="fig">
+      <svg class="plot narrow" viewBox="0 0 400 184" role="img" aria-label="左：正規分布のつりがね型の曲線。マイナス σ から σ に約 68 パーセント、マイナス 2σ から 2σ に約 95 パーセントが入る。右：y = e のマイナス x 乗のグラフ。x = 0 で 1、x = 1 で約 0.37、x = 2 で約 0.14、x = 3 で約 0.05。">
+        <line class="axis" x1="8" y1="134" x2="192" y2="134"/>
+        <path class="band2" d="M44,134 L44,120.5 L45.4,119.1 L46.8,117.6 L48.2,116 L49.6,114.3 L51,112.4 L52.4,110.5 L53.8,108.4 L55.2,106.3 L56.6,104 L58,101.6 L59.4,99.1 L60.8,96.6 L62.2,93.9 L63.6,91.2 L65,88.3 L66.4,85.5 L67.8,82.5 L69.2,79.5 L70.6,76.5 L72,73.5 L73.4,70.5 L74.8,67.5 L76.2,64.5 L77.6,61.6 L79,58.7 L80.4,55.9 L81.8,53.3 L83.2,50.7 L84.6,48.3 L86,46 L87.4,43.9 L88.8,41.9 L90.2,40.2 L91.6,38.7 L93,37.3 L94.4,36.2 L95.8,35.4 L97.2,34.8 L98.6,34.4 L100,34.3 L101.4,34.4 L102.8,34.8 L104.2,35.4 L105.6,36.2 L107,37.3 L108.4,38.7 L109.8,40.2 L111.2,41.9 L112.6,43.9 L114,46 L115.4,48.3 L116.8,50.7 L118.2,53.3 L119.6,55.9 L121,58.7 L122.4,61.6 L123.8,64.5 L125.2,67.5 L126.6,70.5 L128,73.5 L129.4,76.5 L130.8,79.5 L132.2,82.5 L133.6,85.5 L135,88.3 L136.4,91.2 L137.8,93.9 L139.2,96.6 L140.6,99.1 L142,101.6 L143.4,104 L144.8,106.3 L146.2,108.4 L147.6,110.5 L149,112.4 L150.4,114.3 L151.8,116 L153.2,117.6 L154.6,119.1 L156,120.5 L156,134 Z"/>
+<path class="band1" d="M72,134 L72,73.5 L72.7,72 L73.4,70.5 L74.1,69 L74.8,67.5 L75.5,66 L76.2,64.5 L76.9,63 L77.6,61.6 L78.3,60.1 L79,58.7 L79.7,57.3 L80.4,55.9 L81.1,54.6 L81.8,53.3 L82.5,52 L83.2,50.7 L83.9,49.5 L84.6,48.3 L85.3,47.1 L86,46 L86.7,44.9 L87.4,43.9 L88.1,42.9 L88.8,41.9 L89.5,41 L90.2,40.2 L90.9,39.4 L91.6,38.7 L92.3,38 L93,37.3 L93.7,36.8 L94.4,36.2 L95.1,35.8 L95.8,35.4 L96.5,35 L97.2,34.8 L97.9,34.5 L98.6,34.4 L99.3,34.3 L100,34.3 L100.7,34.3 L101.4,34.4 L102.1,34.5 L102.8,34.8 L103.5,35 L104.2,35.4 L104.9,35.8 L105.6,36.2 L106.3,36.8 L107,37.3 L107.7,38 L108.4,38.7 L109.1,39.4 L109.8,40.2 L110.5,41 L111.2,41.9 L111.9,42.9 L112.6,43.9 L113.3,44.9 L114,46 L114.7,47.1 L115.4,48.3 L116.1,49.5 L116.8,50.7 L117.5,52 L118.2,53.3 L118.9,54.6 L119.6,55.9 L120.3,57.3 L121,58.7 L121.7,60.1 L122.4,61.6 L123.1,63 L123.8,64.5 L124.5,66 L125.2,67.5 L125.9,69 L126.6,70.5 L127.3,72 L128,73.5 L128,134 Z"/>
+<polyline class="curve-mppi" points="10.4,133.4 11.5,133.3 12.6,133.2 13.8,133.1 14.9,133 16,132.9 17.1,132.8 18.2,132.6 19.4,132.4 20.5,132.2 21.6,132 22.7,131.8 23.8,131.5 25,131.3 26.1,130.9 27.2,130.6 28.3,130.2 29.4,129.8 30.6,129.4 31.7,128.9 32.8,128.4 33.9,127.8 35,127.2 36.2,126.6 37.3,125.9 38.4,125.1 39.5,124.3 40.6,123.5 41.8,122.5 42.9,121.5 44,120.5 45.1,119.4 46.2,118.2 47.4,117 48.5,115.6 49.6,114.3 50.7,112.8 51.8,111.3 53,109.7 54.1,108 55.2,106.3 56.3,104.5 57.4,102.6 58.6,100.6 59.7,98.6 60.8,96.6 61.9,94.4 63,92.3 64.2,90 65.3,87.8 66.4,85.5 67.5,83.1 68.6,80.7 69.8,78.3 70.9,75.9 72,73.5 73.1,71.1 74.2,68.7 75.4,66.3 76.5,63.9 77.6,61.6 78.7,59.3 79.8,57 81,54.9 82.1,52.7 83.2,50.7 84.3,48.7 85.4,46.9 86.6,45.1 87.7,43.5 88.8,41.9 89.9,40.5 91,39.2 92.2,38.1 93.3,37.1 94.4,36.2 95.5,35.5 96.6,35 97.8,34.6 98.9,34.3 100,34.3 101.1,34.3 102.2,34.6 103.4,35 104.5,35.5 105.6,36.2 106.7,37.1 107.8,38.1 109,39.2 110.1,40.5 111.2,41.9 112.3,43.5 113.4,45.1 114.6,46.9 115.7,48.7 116.8,50.7 117.9,52.7 119,54.9 120.2,57 121.3,59.3 122.4,61.6 123.5,63.9 124.6,66.3 125.8,68.7 126.9,71.1 128,73.5 129.1,75.9 130.2,78.3 131.4,80.7 132.5,83.1 133.6,85.5 134.7,87.8 135.8,90 137,92.3 138.1,94.4 139.2,96.6 140.3,98.6 141.4,100.6 142.6,102.6 143.7,104.5 144.8,106.3 145.9,108 147,109.7 148.2,111.3 149.3,112.8 150.4,114.3 151.5,115.6 152.6,117 153.8,118.2 154.9,119.4 156,120.5 157.1,121.5 158.2,122.5 159.4,123.5 160.5,124.3 161.6,125.1 162.7,125.9 163.8,126.6 165,127.2 166.1,127.8 167.2,128.4 168.3,128.9 169.4,129.4 170.6,129.8 171.7,130.2 172.8,130.6 173.9,130.9 175,131.3 176.2,131.5 177.3,131.8 178.4,132 179.5,132.2 180.6,132.4 181.8,132.6 182.9,132.8 184,132.9 185.1,133 186.2,133.1 187.4,133.2 188.5,133.3 189.6,133.4"/>
+        <path d="M44 31V26H156V31" style="fill: none; stroke: var(--ink-2); stroke-width: 1.25"/>
+        <text class="t-2" x="100" y="19" text-anchor="middle">約 95%</text>
+        <text class="t" x="100" y="116" text-anchor="middle">約 68%</text>
+        <g class="tick" text-anchor="middle">
+          <text x="44" y="151">−2<tspan class="mi">σ</tspan></text>
+          <text x="72" y="151">−<tspan class="mi">σ</tspan></text>
+          <text x="100" y="151">0</text>
+          <text x="128" y="151"><tspan class="mi">σ</tspan></text>
+          <text x="156" y="151">2<tspan class="mi">σ</tspan></text>
+        </g>
+        <text class="t-b" x="100" y="177" text-anchor="middle">ゆらぎ：正規分布</text>
+
+        <line class="axis" x1="230" y1="134" x2="388" y2="134"/>
+        <line class="axis" x1="236" y1="138" x2="236" y2="16"/>
+        <polyline class="curve-mppi" points="236,24 237.5,29.4 239,34.5 240.4,39.3 241.9,43.9 243.4,48.3 244.9,52.5 246.4,56.5 247.8,60.3 249.3,63.9 250.8,67.3 252.3,70.5 253.8,73.6 255.2,76.6 256.7,79.4 258.2,82 259.7,84.6 261.2,87 262.6,89.3 264.1,91.5 265.6,93.5 267.1,95.5 268.6,97.4 270,99.2 271.5,100.9 273,102.5 274.5,104 276,105.5 277.4,106.9 278.9,108.2 280.4,109.5 281.9,110.7 283.4,111.8 284.8,112.9 286.3,113.9 287.8,114.9 289.3,115.8 290.8,116.7 292.2,117.5 293.7,118.3 295.2,119.1 296.7,119.8 298.2,120.5 299.6,121.2 301.1,121.8 302.6,122.4 304.1,123 305.6,123.5 307,124 308.5,124.5 310,125 311.5,125.4 313,125.8 314.4,126.2 315.9,126.6 317.4,127 318.9,127.3 320.4,127.6 321.8,127.9 323.3,128.2 324.8,128.5 326.3,128.8 327.8,129 329.2,129.3 330.7,129.5 332.2,129.7 333.7,129.9 335.2,130.1 336.6,130.3 338.1,130.5 339.6,130.7 341.1,130.8 342.6,131 344,131.1 345.5,131.3 347,131.4 348.5,131.5 350,131.7 351.4,131.8 352.9,131.9 354.4,132 355.9,132.1 357.4,132.2 358.8,132.3 360.3,132.4 361.8,132.4 363.3,132.5 364.8,132.6 366.2,132.6 367.7,132.7 369.2,132.8 370.7,132.8 372.2,132.9 373.6,132.9 375.1,133 376.6,133 378.1,133.1 379.6,133.1 381,133.2 382.5,133.2 384,133.3"/>
+<circle class="dot mppi" cx="236" cy="24" r="4"/>
+<circle class="dot mppi" cx="265.6" cy="93.5" r="4"/>
+<circle class="dot mppi" cx="295.2" cy="119.1" r="4"/>
+<circle class="dot mppi" cx="324.8" cy="128.5" r="4"/>
+        <g class="tick">
+          <text x="229" y="28" text-anchor="end">1</text>
+          <g text-anchor="middle">
+            <text x="236" y="151">0</text><text x="265.6" y="151">1</text><text x="295.2" y="151">2</text><text x="324.8" y="151">3</text><text x="354.4" y="151">4</text><text x="384" y="151">5</text>
+          </g>
+        </g>
+        <g class="t-2">
+          <text x="272" y="88">0.37</text>
+          <text x="301" y="110">0.14</text>
+          <text x="331" y="119">0.05</text>
+        </g>
+        <text class="t-b" x="310" y="177" text-anchor="middle">重みのもと：<tspan class="mi">y</tspan> = <tspan class="mi">e</tspan><tspan font-size="9.5" dy="-6">−</tspan><tspan class="mi" font-size="9.5">x</tspan></text>
+      </svg>
+    </div>
+    <figcaption><span class="fig-num">図 8</span>左：ゆらぎをつくる正規分布。0 の近くがよく出て、\(\pm\sigma\) に約 68%、\(\pm 2\sigma\) に約 95% が入る。右：重みのもとになる \(y = e^{-x}\)。\(x\) が 1 増えるごとに約 0.37 倍になり、0 や負にはならない。</figcaption>
+  </figure>
+
+  <h3>指数関数で重みをつくる</h3>
+  <p>重みの分子 \(e^{-(S^{(k)} - S_{\min})/\lambda}\) を見る。\(S^{(k)} - S_{\min}\) は「いちばん良い候補より何点悪いか」を表す 0 以上の数だ。関数 \(y = e^{-x}\) には次の性質がある。</p>
+  <ul>
+    <li>いつも正。重みが負になることはない。</li>
+    <li>\(x = 0\) で 1、\(x\) が大きいほど小さい。悪い候補ほど軽くなる。</li>
+    <li>\(x\) が 1 増えるごとに \(1/e \approx 0.37\) 倍になる。差が開くほど、急に軽くなる。</li>
+  </ul>
+  <p>最良の候補の分子はちょうど 1 で、ほかは 1 より小さい。分子の合計で割るのは、重みの合計を 1 にするためだ。こうすると \(\sum_k w^{(k)} \varepsilon^{(k)}\) は、確率と値をかけて足す<strong>期待値</strong>と同じ形の、重みつき平均になる。</p>
+
+  <h3>1&nbsp;手先の例を手で計算する</h3>
+  <p>MPC と同じ例（\(\Delta t = 1,\ \rho = 1,\ x_0 = 0,\ g = 4,\ N = 1\)）で計算してみる。コストは \(S(u) = 2(u - 2)^2 + 8\) で、本当の答えは \(u = 2\) だ。今の案を \(u = 0\)、\(\sigma = 2\) として、ゆらぎを 5&nbsp;個引いたら \(\varepsilon = -1,\ 0.5,\ 1,\ 2.5,\ 4\) だったとする（案が 0 なので、候補の入力もこの値になる）。\(\lambda = 1\) のとき：</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">\(k\)</th><th scope="col" class="num">候補 \(u + \varepsilon^{(k)}\)</th><th scope="col" class="num">コスト \(S^{(k)}\)</th><th scope="col" class="num">\(S^{(k)} - S_{\min}\)</th><th scope="col" class="num">\(e^{-(S^{(k)} - S_{\min})/\lambda}\)</th><th scope="col" class="num">重み \(w^{(k)}\)</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">1</th><td class="num">−1</td><td class="num">26</td><td class="num">17.5</td><td class="num">0.0000</td><td class="num">0.0000</td></tr>
+        <tr><th scope="row">2</th><td class="num">0.5</td><td class="num">12.5</td><td class="num">4</td><td class="num">0.0183</td><td class="num">0.0147</td></tr>
+        <tr><th scope="row">3</th><td class="num">1</td><td class="num">10</td><td class="num">1.5</td><td class="num">0.2231</td><td class="num">0.1797</td></tr>
+        <tr><th scope="row" class="best">4</th><td class="num best">2.5</td><td class="num best">8.5</td><td class="num best">0</td><td class="num best">1</td><td class="num best">0.8052</td></tr>
+        <tr><th scope="row">5</th><td class="num">4</td><td class="num">16</td><td class="num">7.5</td><td class="num">0.0006</td><td class="num">0.0004</td></tr>
+      </tbody>
+      <tfoot><tr><th scope="row">合計</th><td></td><td></td><td></td><td class="num">1.2420</td><td class="num">1</td></tr></tfoot>
+    </table>
+  </div>
+  <p class="table-note">色をつけた行が最良の候補（\(S_{\min} = 8.5\)）。各重みは、左の列の値を合計 1.2420 で割ったもの。</p>
+  <p>重みつき平均は \(0.0147 \times 0.5 + 0.1797 \times 1 + 0.8052 \times 2.5 + 0.0004 \times 4 \approx 2.20\)（\(k = 1\) の項はほぼ 0）。案は \(0 \to 2.20\) に更新され、1&nbsp;回で本当の答え 2 の近くまで来た。微分は一度も使っていない。</p>
+</section>
+
+<section id="temperature">
+  <h2>温度 \(\lambda\) の役割</h2>
+  <p>同じ 5&nbsp;個の候補で \(\lambda\) だけを変えると、重みと更新後の値は次のようになる。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col" class="num">\(\lambda\)</th><th scope="col">重み（\(k = 1, \dots, 5\)）</th><th scope="col" class="num">重みつき平均</th><th scope="col" class="num">実質の本数</th></tr></thead>
+      <tbody>
+        <tr><th scope="row" class="num">0.1</th><td>0, 0, 0, 1, 0</td><td class="num">2.50</td><td class="num">1.0</td></tr>
+        <tr><th scope="row" class="num">1</th><td>0.000, 0.015, 0.180, 0.805, 0.000</td><td class="num">2.20</td><td class="num">1.5</td></tr>
+        <tr><th scope="row" class="num">4</th><td>0.006, 0.166, 0.309, 0.450, 0.069</td><td class="num">1.79</td><td class="num">3.0</td></tr>
+        <tr><th scope="row" class="num">100</th><td>0.178, 0.204, 0.209, 0.212, 0.197</td><td class="num">1.45</td><td class="num">5.0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul>
+    <li>\(\lambda\) が小さいと、最良の候補（2.5）だけを選ぶ。どの候補が引けたかという運に左右され、毎回の答えが跳ねやすい。</li>
+    <li>\(\lambda\) が大きいと、コストを無視したただの平均（5&nbsp;個の平均は 1.4）に近づく。良い候補も悪い候補も同じ扱いになる。</li>
+    <li>ほどよい \(\lambda\) では、良い候補を中心に何本かを混ぜた平均になる。</li>
+  </ul>
+  <p>「実質の本数」は \(1 \big/ \sum_k \big(w^{(k)}\big)^2\) で計算した値で、何本の候補を均等に平均したのと同じくらいかを表す。重みが 1&nbsp;本に集中すると 1、全部が同じ重みなら \(K\) になる。Nav2 の説明でも、temperature は 0 に近いほどコストの低い候補を重視し、0 なら最良の候補だけを使い、非常に大きいとコストを無視した平均になる、とされている。</p>
+  <figure id="fig-weights">
+    <div class="fig">
+      <div class="key-row" style="margin: 0 0 8px" aria-hidden="true">
+        <span class="key"><span class="key-dot" style="background: var(--mppi)"></span>候補（大きく濃いほど重みが大きい）</span>
+        <span class="key"><span class="key-line mean"></span>重みつき平均（更新後の案）</span>
+        <span class="key"><span class="key-line ref"></span>谷底 \(u = 2\)</span>
+        <span class="key"><span class="key-line theory"></span>\(K \to \infty\) の理論値</span>
+      </div>
+      <svg class="plot" viewBox="0 0 400 300" role="img" aria-label="MPPI の 1 回の更新。放物線の上に候補の点があり、下の帯に各候補の重みを棒で示す。温度を変えると重みの集中の仕方が変わり、重みつき平均の位置が動く。" data-plot></svg>
+      <div class="controls">
+        <label for="w-lam">温度 \(\lambda\)</label>
+        <input id="w-lam" type="range" min="-1.3" max="2" step="0.01" value="0">
+        <output for="w-lam" data-out="lam">1.00</output>
+        <label for="w-sig">ゆらぎ \(\sigma\)</label>
+        <input id="w-sig" type="range" min="0.5" max="3" step="0.1" value="2">
+        <output for="w-sig" data-out="sig">2.0</output>
+      </div>
+      <div class="btn-row">
+        <label for="w-k" style="font-size: 14px; color: var(--ink-2)">候補の数 \(K\)</label>
+        <select id="w-k" class="select">
+          <option value="5" selected>5</option>
+          <option value="20">20</option>
+          <option value="100">100</option>
+          <option value="1000">1000</option>
+        </select>
+        <button type="button" class="btn" data-resample>候補を引き直す</button>
+      </div>
+      <div class="readout">
+        <span>重みつき平均 <b data-r="mean">2.20</b></span>
+        <span>実質の本数 <b data-r="ess">1.5</b></span>
+        <span>\(K \to \infty\) の理論値 <b data-r="theory">1.88</b></span>
+      </div>
+      <noscript><p class="ifig-note">この図を動かすには JavaScript を有効にしてください。</p></noscript>
+    </div>
+    <figcaption><span class="fig-num">図 9</span>1&nbsp;手先の例（コスト \(S(u) = 2(u - 2)^2 + 8\)、今の案 \(u = 0\)）で、MPPI の 1&nbsp;回の更新を描いた。点の高さが候補のコスト、下の棒が重み（いちばん重い候補を同じ高さにそろえた）。最初は表と同じ 5&nbsp;個の候補（\(\sigma = 2\)）で、\(\sigma\) を動かすと候補の広がりが変わる。\(K\) を増やすと、重みつき平均は理論値（<a href="#link">発展の節</a>で導く）に近づく。\(K = 1000\) では下の棒がつりがね型に並び、その中心が理論値になる。これが発展の節の「出やすさ × 重み」の山だ。</figcaption>
+  </figure>
+</section>
+
+<section id="sequence">
+  <h2>何手も先まで予測する MPPI</h2>
+  <p>実際には、1&nbsp;手ではなく \(N\) 手先までの入力の列 \(u_0, \dots, u_{N-1}\) をまとめて扱う。ゆらぎも列 \(\varepsilon^{(k)}_0, \dots, \varepsilon^{(k)}_{N-1}\) になり、コスト \(S^{(k)}\) は軌跡全体で 1&nbsp;つの数にする。重みは候補ごとに 1&nbsp;つで、どの時刻も同じ重みで平均する。</p>
+  <div class="eq key-eq">\[ u_n \leftarrow u_n + \sum_{k=1}^{K} w^{(k)}\, \varepsilon^{(k)}_n \qquad (n = 0, 1, \dots, N-1) \]</div>
+  <p>1&nbsp;周期の流れを、Python 風の擬似コードで書くと次のとおり。</p>
+<pre><code># u: 今の入力の案（長さ N のリスト）、x_now: 測った今の状態
+for k in range(K):                       # 候補ごと（互いに独立なので並列に計算できる）
+    eps[k] = [正規分布 N(0, σ²) の乱数 for n in range(N)]
+    x = x_now
+    S[k] = 0
+    for n in range(N):                   # ロールアウト
+        x = model(x, u[n] + eps[k][n])   # 漸化式で 1 ステップ進める
+        S[k] += cost(x)
+S_min = min(S)
+w = [exp(-(S[k] - S_min) / λ) for k in range(K)]
+w = [wk / sum(w) for wk in w]            # 合計を 1 にする
+for n in range(N):
+    u[n] += sum(w[k] * eps[k][n] for k in range(K))
+send(u[0])                               # 最初の 1 手だけ実行する
+u = u[1:] + [u[-1]]                      # 1 つずらして、次の周期の案にする</code></pre>
+  <p class="pre-note">model と cost は、モデル（漸化式）とコスト関数。send はロボットへの指令の送信。</p>
+  <p>最後の行のように、今回の答えを 1&nbsp;ステップずらして次の周期の出発点にする（<strong>ウォームスタート</strong>）。前回の答えのまわりから探し始めるので、1&nbsp;周期に 1&nbsp;回の更新でも、くり返すうちに良い答えに近づいていく。</p>
+  <p>候補どうしは互いに関係なく計算できるので、並列計算に向いている。大量の候補を GPU で同時に計算する実装も多い。Nav2 の MPPI は CPU のベクトル演算を使い、ふつうの CPU（第 4 世代の Core i5）でも 50&nbsp;Hz 以上で動くと説明されている。</p>
+  <aside class="memo">
+    <p class="memo-title">実装でよく加わる工夫</p>
+    <ul>
+      <li>入力の上限で候補を切り詰める（クリップ）。上限の内側の値どうしを重みつき平均すれば、結果も上限の内側に収まる。</li>
+      <li>論文の式では、状態のコストに加えて「案 \(u\) とゆらぎ \(\varepsilon\) の積」に比例する項もコストに足す。ゆらぎの付け方に由来する補正で、Nav2 の gamma はこの項にかかる係数にあたる。</li>
+      <li>乱数による細かいガタつきを抑えるため、入力の列をなめらかにしたり、入力の変化の大きさをコストに入れたりする。</li>
+      <li>1&nbsp;周期の中で更新を何回かくり返すこともある（Nav2 の iteration_count。既定値は 1 で、回数を増やすより候補を増やすことが勧められている）。</li>
+    </ul>
+  </aside>
+</section>
+
+<section id="demo">
+  <h2>2&nbsp;輪ロボットで MPPI を動かす</h2>
+  <p>差動 2&nbsp;輪のロボット（左の円）が、人（灰色の円）をよけてゴール（×）へ向かう。毎ステップ、\(K\) 本の候補を正規分布でばらまいてロールアウトし、重みつき平均で入力の列を更新して、最初の 1&nbsp;手だけを実行している。オレンジの線が候補で、濃いほど重みが大きい。太い線は、更新した入力の列で予測した軌跡だ。</p>
+  <figure id="fig-demo">
+    <div class="fig">
+      <canvas class="demo-canvas" width="700" height="420" role="img" aria-label="2 輪ロボットが人をよけてゴールへ向かう MPPI のデモ。オレンジの線は候補の軌跡で、濃いほど重みが大きい。太い線は重みつき平均で更新した計画。"></canvas>
+      <div class="key-row" aria-hidden="true">
+        <span class="key"><span class="key-line samp"></span>候補（濃いほど重みが大きい）</span>
+        <span class="key"><span class="key-line mean"></span>更新した計画</span>
+        <span class="key"><span class="key-line" style="border-top: 2px dashed var(--ink-2)"></span>通った道</span>
+        <span class="key"><span class="key-dot"></span>人（点線の内側は罰、薄い円は 3&nbsp;秒後の予測）</span>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn primary" data-play aria-pressed="false">再生</button>
+        <button type="button" class="btn" data-step>1&nbsp;ステップ</button>
+        <button type="button" class="btn" data-reset>リセット</button>
+        <select class="select" data-scene aria-label="場面">
+          <option value="still">止まっている人</option>
+          <option value="cross">横切る人</option>
+          <option value="two">2&nbsp;人</option>
+        </select>
+      </div>
+      <div class="controls">
+        <label for="d-lam">温度 \(\lambda\)</label>
+        <input id="d-lam" type="range" min="-2" max="3" step="0.05" value="0">
+        <output for="d-lam" data-out="lam">1.0</output>
+        <label for="d-sig">ゆらぎ \(\sigma_\omega\)</label>
+        <input id="d-sig" type="range" min="0.1" max="2" step="0.05" value="0.8">
+        <output for="d-sig" data-out="sig">0.80</output>
+        <label for="d-k">候補の数 \(K\)</label>
+        <input id="d-k" type="range" min="0" max="4" step="1" value="3">
+        <output for="d-k" data-out="k">300</output>
+      </div>
+      <div class="readout">
+        <span>時刻 <b data-r="t">0.0</b>&nbsp;秒</span>
+        <span>\(v\) <b data-r="v">0.00</b>&nbsp;m/s</span>
+        <span>\(\omega\) <b data-r="w">0.00</b>&nbsp;rad/s</span>
+        <span>実質の本数 <b data-r="ess">—</b></span>
+        <span>接触 <b data-r="hit">0</b>&nbsp;回</span>
+        <b data-r="status"></b>
+      </div>
+      <noscript><p class="ifig-note">このデモを動かすには JavaScript を有効にしてください。</p></noscript>
+    </div>
+    <figcaption><span class="fig-num">図 10</span>MPPI のデモ。\(\Delta t = 0.1\)&nbsp;秒、\(N = 30\) で 3&nbsp;秒先まで予測する。各ステップのコストは、ゴールまでの距離と \(0.05\,\omega^2\) の和に、人に近づいたときの罰を足したもの。罰は、人との中心間の距離が 1.15&nbsp;m より近いと「近づいた距離の 2&nbsp;乗 × 30」、0.55&nbsp;m 未満（接触）なら 1000 で、壁に近づいても 1000 を足す。最後のステップでは、ゴールまでの距離の 6&nbsp;倍も足す。人は今の速さのまま歩くと予測している。\(v\) は 0〜1&nbsp;m/s、\(\omega\) は ±1.5&nbsp;rad/s の範囲に制限し、速さのゆらぎは \(\sigma_v = 0.35\,\sigma_\omega\) とした。</figcaption>
+  </figure>
+  <ul class="try">
+    <li>\(\lambda\) を 0.01 くらいまで下げると、毎回その場で最良の 1&nbsp;本だけを選ぶので、軌跡がガタつく。100 以上に上げると、ただの平均に近づいて案がほとんど良くならず、なかなか前に進まなくなる。</li>
+    <li>\(\sigma\) を小さくすると、案の近くしか探さないので回り道を見つけるのが遅れ、到着に時間がかかる。</li>
+    <li>\(K\) を 20 にすると、良い候補を引けるかが運次第になり、動きが不安定になりやすい。</li>
+  </ul>
+</section>
+
+<section id="why-exp">
+  <h2>なぜ指数関数なのか<span class="tag">発展</span></h2>
+  <p>重みは「コストが低いほど大きい正の数」なら何でもよさそうに見える。たとえば \(1/S\) でもよいはずだ。それでも MPPI が \(e^{-S/\lambda}\) を使うのには理由がある。</p>
+
+  <h3>コストの差だけで決まる</h3>
+  <p>2&nbsp;つの候補の重みの比は、指数法則 \(e^{a}/e^{b} = e^{a-b}\) から</p>
+  <div class="eq">\[ \frac{w^{(i)}}{w^{(j)}} = \frac{e^{-S^{(i)}/\lambda}}{e^{-S^{(j)}/\lambda}} = e^{-(S^{(i)} - S^{(j)})/\lambda} \]</div>
+  <p>となり、コストの<strong>差</strong>だけで決まる。全員のコストに同じ数を足しても、重みは変わらない。コストには「ゴールまでの距離」のように、どの候補にも共通する大きな部分がよく含まれるので、これは大事な性質だ。\(1/S\) だと、コストが 1 と 2 の候補の重みの比は 2 倍なのに、全員に 100 を足しただけで \(102/101 \approx 1.01\) 倍に縮んでしまう。</p>
+  <p>重みの式で \(S_{\min}\) を引いてよいのも、このためだ。分子も分母も \(e^{S_{\min}/\lambda}\) 倍されるだけで、約分で消える。引くのには実用上の理由もある。コストが 1000 くらいになると、\(e^{-1000}\) はコンピュータで表せる最小の数より小さくなって 0 として扱われ、すべての重みが 0 になって割り算ができなくなる。\(S_{\min}\) を引けば、最良の候補の分子はかならず 1 なので、この問題は起きない。</p>
+  <p>この形は、機械学習ではソフトマックス（softmax）、物理では温度 \(\lambda\) のボルツマン分布と同じ形をしている。\(\lambda\) を温度と呼ぶのはこのためだ。</p>
+
+  <h3>「コストを下げる」と「1&nbsp;つに賭けない」のつり合い</h3>
+  <p>\(K\) 個の候補に、合計が 1 になる割合 \(q_1, \dots, q_K\)（どれも 0 以上）を配ることを考える。次の \(F\) を最小にする配り方を求めたい（\(\log\) は自然対数）。</p>
+  <div class="eq">\[ F(q) = \sum_{k=1}^{K} q_k\, S^{(k)} \;+\; \lambda \sum_{k=1}^{K} q_k \log q_k \]</div>
+  <ul>
+    <li>第 1&nbsp;項は、割合で平均したコスト。最良の候補に全部を配ると最小になる。</li>
+    <li>第 2&nbsp;項は、配り方の偏り。1&nbsp;つに全部を配ると最大の 0、均等に配ると最小の \(-\log K\) になる（\(q_k = 0\) の項は 0 と約束する）。</li>
+  </ul>
+  <p>つまり \(F\) の最小化は、「平均コストを下げたい」と「1&nbsp;つに賭けすぎず、何本かに分散させたい」のつり合いを \(\lambda\) で決める問題だ。分散させておけば、たまたま低いコストが出た 1&nbsp;本に振り回されにくい。答えは</p>
+  <div class="eq key-eq">\[ q_k^* = \frac{e^{-S^{(k)}/\lambda}}{Z}, \qquad Z = \sum_{j=1}^{K} e^{-S^{(j)}/\lambda} \]</div>
+  <p>で、MPPI の重みそのものになる。証明は数学 III の範囲でできる。</p>
+  <details class="proof">
+    <summary>証明を見る（数学 III）</summary>
+    <div class="proof-body">
+      <p><strong>1.</strong> \(x > 0\) で \(\log x \le x - 1\)（等号は \(x = 1\) のときだけ）を示す。\(f(x) = x - 1 - \log x\) とおくと \(f'(x) = 1 - \dfrac{1}{x}\) なので、\(f\) は \(0 < x < 1\) で減少し、\(x > 1\) で増加する。よって最小値は \(f(1) = 0\) で、\(f(x) \ge 0\)。</p>
+      <p><strong>2.</strong> \(\log q_k^* = -\dfrac{S^{(k)}}{\lambda} - \log Z\) より \(S^{(k)} = -\lambda \log q_k^* - \lambda \log Z\)。これを \(F\) に代入し、\(\sum_k q_k = 1\) を使うと</p>
+      <div class="eq">\[ F(q) = \lambda \sum_{k} q_k \log \frac{q_k}{q_k^*} \;-\; \lambda \log Z \]</div>
+      <p><strong>3.</strong> 右辺の和が 0 以上であることを示す。\(q_k > 0\) の項だけを足す（\(q_k = 0\) の項は 0）。1. より \(\log \dfrac{q_k^*}{q_k} \le \dfrac{q_k^*}{q_k} - 1\) なので</p>
+      <div class="eq">\[ \sum_{k} q_k \log \frac{q_k}{q_k^*} = -\sum_{k} q_k \log \frac{q_k^*}{q_k} \;\ge\; -\sum_{k} q_k \left( \frac{q_k^*}{q_k} - 1 \right) = 1 - \sum_{k} q_k^* \;\ge\; 0 \]</div>
+      <p>（最後の和は \(q_k > 0\) の \(k\) についてだけとるので、1 以下になる。）よって \(F(q) \ge -\lambda \log Z\) で、等号はすべての \(k\) で \(q_k = q_k^*\) のときだけ成り立つ。したがって、\(F\) を最小にする配り方は \(q^*\) だ。■</p>
+    </div>
+  </details>
+  <aside class="memo">
+    <p class="memo-title">大学での名前</p>
+    <p>第 2&nbsp;項に \(\log K\) を足したものは、均等な配り方からの<strong>KL ダイバージェンス</strong>（分布の離れ具合）と呼ばれる。また、\(F\) の最小値 \(-\lambda \log Z\) は<strong>自由エネルギー</strong>と呼ばれる。MPPI の論文は、この 2&nbsp;つの考え方を使って重みの式を導いている。</p>
+  </aside>
+</section>
+
+<section id="link">
+  <h2>MPC と MPPI のつながり<span class="tag">発展</span></h2>
+  <p>MPPI は微分を使わないが、実は「坂を下る」ことと深い関係がある。1&nbsp;手先の例 \(S(u) = a(u - c)^2 + b\)（\(a > 0\)、谷底は \(u = c\)）で、候補の数 \(K\) を限りなく増やしたときの更新を計算してみる。</p>
+  <p>今の案を \(\bar u\)（ユーバー）とすると、候補 \(u\) の出やすさは、中心 \(\bar u\) の正規分布の山 \(e^{-(u - \bar u)^2/(2\sigma^2)}\) に比例する。\(K\) が十分大きいとき、重みつき平均は、\(u\) の値を「出やすさ × 重み」に比例する割合で平均したものになる。その割合の山は、指数法則により、指数部分の足し算で書ける。</p>
+  <div class="eq">\[ e^{-\frac{(u - \bar u)^2}{2\sigma^2}} \times e^{-\frac{a(u - c)^2}{\lambda}} = \exp\!\left[ -\left( \frac{(u - \bar u)^2}{2\sigma^2} + \frac{a(u - c)^2}{\lambda} \right) \right] \]</div>
+  <p>（重みのうち \(e^{-b/\lambda}\) の部分は、すべての候補に共通なので約分で消える。そのため省いた。）かっこの中は \(u\) の 2&nbsp;次式なので、平方完成すると \(A(u - m)^2 + B\)（\(A > 0\)、\(B\) は定数）の形になる。つまり割合の山は、ふたたび中心 \(m\) のつりがね型（正規分布の形）だ。正規分布の平均は山の中心なので、更新後の値は \(m\) になる。計算すると</p>
+  <div class="eq key-eq">\[ m = \frac{\lambda\,\bar u + 2a\sigma^2 c}{\lambda + 2a\sigma^2} = \bar u + \beta\,(c - \bar u), \qquad \beta = \frac{2a\sigma^2}{\lambda + 2a\sigma^2} \]</div>
+  <details class="proof">
+    <summary>平方完成の途中を見る</summary>
+    <div class="proof-body">
+      <p>\(P = \dfrac{1}{2\sigma^2},\ Q = \dfrac{a}{\lambda}\) とおくと、かっこの中は</p>
+      <div class="eq">\[ \begin{aligned} P(u - \bar u)^2 + Q(u - c)^2 &= (P + Q)\,u^2 - 2(P\bar u + Qc)\,u + (P\bar u^2 + Qc^2) \\ &= (P + Q)\left(u - \frac{P\bar u + Qc}{P + Q}\right)^{\!2} + B \end{aligned} \]</div>
+      <p>よって \(m = \dfrac{P\bar u + Qc}{P + Q}\)。分母と分子に \(2\sigma^2\lambda\) をかけると、\(P \times 2\sigma^2\lambda = \lambda\)、\(Q \times 2\sigma^2\lambda = 2a\sigma^2\) なので、上の式になる。</p>
+    </div>
+  </details>
+  <p>\(0 < \beta < 1\) なので、MPPI の 1&nbsp;回の更新は「案を谷底 \(c\) に向かって、割合 \(\beta\) だけ近づける」ことになる。くり返せば、案と谷底の差は公比 \(1 - \beta\) の等比数列で縮んでいく。</p>
+  <ul>
+    <li>\(\lambda \to 0\) なら \(\beta \to 1\)：一気に谷底へ行く。</li>
+    <li>\(\lambda \to \infty\) なら \(\beta \to 0\)：ほとんど動かない。ゆらぎの平均は 0 だからだ。</li>
+    <li>例の \(a = 2,\ c = 2,\ \sigma = 2,\ \bar u = 0\) では、\(\lambda = 1\) で \(m \approx 1.88\)、\(\lambda = 4\) で \(m = 1.6\)、\(\lambda = 100\) で \(m \approx 0.28\)。5&nbsp;個の候補で計算した表の値とずれるのは、候補が少ないからだ。図 9 で \(K\) を増やすと、この値に近づいていく。</li>
+  </ul>
+  <p>さらに、\(S'(\bar u) = 2a(\bar u - c)\) から \(c - \bar u = -\dfrac{S'(\bar u)}{2a}\) と書きかえると</p>
+  <div class="eq key-eq">\[ m = \bar u - \frac{\sigma^2}{\lambda + 2a\sigma^2}\; S'(\bar u) \]</div>
+  <p>となる。これは歩幅 \(\alpha = \dfrac{\sigma^2}{\lambda + 2a\sigma^2}\) の<strong>勾配降下法そのもの</strong>だ。\(\sigma\) が小さいときは \(\alpha \approx \sigma^2/\lambda\) になる。MPPI は、微分を計算しないかわりに、ばらまいた候補のコストの違いから坂の向きを感じ取って下っている、と言える。</p>
+  <p>違いは、傾きを 1&nbsp;点で測るか、幅 \(\sigma\) の範囲でならして測るかだ。幅をもって測るので、小さなでこぼこや崖のようなコストに惑わされにくく、\(\sigma\) が大きければ離れた谷にも候補が届く。そのかわり、候補が少ないと平均がぶれる。</p>
+  <p>図 7 の例でも、左の谷に届いた候補はコストが低いので重みが大きくなり、案は左へ引っぱられる。ただし、左右の谷に同じくらいの重みが分かれると、平均が真ん中の山（ぶつかる側）に来てしまうことがある。\(\lambda\) を小さめにして良い側に重みを寄せるのはその対策になるが、小さくしすぎると実質の本数が減り、答えがぶれやすくなる。</p>
+</section>
+
+<section id="compare">
+  <h2>MPC と MPPI の比較</h2>
+  <div class="table-wrap">
+    <table class="stack cmp">
+      <thead><tr><th scope="col">観点</th><th scope="col"><span class="mark mark-mpc" aria-hidden="true"></span>MPC（勾配を使う最適化）</th><th scope="col"><span class="mark mark-mppi" aria-hidden="true"></span>MPPI（サンプリング）</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">探し方</th><td data-label="MPC">傾き（微分）を計算して谷を下る。2&nbsp;次のコストなら平方完成で一発</td><td data-label="MPPI">正規分布でばらまいた候補を走らせ、\(e^{-S/\lambda}\) の重みで平均する</td></tr>
+        <tr><th scope="row">必要なもの</th><td data-label="MPC">モデルとコストの微分</td><td data-label="MPPI">モデルを先まで計算できること（微分はいらない）</td></tr>
+        <tr><th scope="row">得意なこと</th><td data-label="MPC">なめらかなコスト。制約を正確に守る。少ない計算で精度よく解く</td><td data-label="MPPI">崖のようなコスト（接触したら罰）や複雑なモデル。並列計算しやすく、1&nbsp;周期の計算量が \(K \times N\) でほぼ一定</td></tr>
+        <tr><th scope="row">苦手なこと</th><td data-label="MPC">局所解。値が跳ぶコスト。問題が複雑だと、計算時間が読みにくい</td><td data-label="MPPI">候補が少ないと答えがぶれる。制約はクリップや罰でしか扱えない。狭い隙間を通る候補を引きにくい</td></tr>
+        <tr><th scope="row">調整する値</th><td data-label="MPC">ホライズン \(N\)、重み \(\rho\) など</td><td data-label="MPPI">\(N\)、温度 \(\lambda\)、ゆらぎ \(\sigma\)、候補の数 \(K\)</td></tr>
+        <tr><th scope="row">使われ方の例</th><td data-label="MPC">acados、CasADi、OSQP などのソルバーで解く</td><td data-label="MPPI">ROS 2 の Nav2 にある MPPI Controller</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="nav2">
+  <h2>Nav2 の MPPI パラメータとの対応</h2>
+  <p>ROS 2 の Nav2 にある MPPI Controller のパラメータは、この資料の記号と次のように対応する。</p>
+  <div class="table-wrap">
+    <table class="first-nowrap">
+      <thead><tr><th scope="col">この資料</th><th scope="col">Nav2 のパラメータ</th><th scope="col" class="num">既定値</th><th scope="col">意味</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">\(\lambda\)</th><td><code>temperature</code></td><td class="num">0.3</td><td>温度。0 に近いほど低コストの候補を重視する</td></tr>
+        <tr><th scope="row">\(K\)</th><td><code>batch_size</code></td><td class="num">1000</td><td>候補の数。1000 なら 50&nbsp;Hz、2000 なら 30&nbsp;Hz くらいで良い結果になるとされる</td></tr>
+        <tr><th scope="row">\(N\)</th><td><code>time_steps</code></td><td class="num">56</td><td>予測するステップ数</td></tr>
+        <tr><th scope="row">\(\Delta t\)</th><td><code>model_dt</code></td><td class="num">0.05&nbsp;s</td><td>1&nbsp;ステップの時間。\(N \times \Delta t\)（既定で 2.8&nbsp;秒）が予測する時間</td></tr>
+        <tr><th scope="row">\(\sigma\)</th><td><code>vx_std</code>、<code>wz_std</code> など</td><td class="num">vx_std は 0.2</td><td>前後の速度、角速度など、入力ごとのゆらぎの標準偏差</td></tr>
+        <tr><th scope="row">更新の回数</th><td><code>iteration_count</code></td><td class="num">1</td><td>1&nbsp;周期に重みつき平均をくり返す回数</td></tr>
+        <tr><th scope="row">補正項の係数</th><td><code>gamma</code></td><td class="num">0.015</td><td>論文の「案 × ゆらぎ」の項の係数。なめらかさ（大）と省エネ（小）のつり合いを決める</td></tr>
+        <tr><th scope="row">コスト \(S\)</th><td><code>critics</code></td><td class="num">—</td><td>障害物、経路への追従、ゴールへの接近などのコスト（critic）を選び、足し合わせる</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="table-note">既定値は Nav2（Jazzy）の設定ガイドによる。版によって変わることがあるので、使っている版のドキュメントで確かめること。</p>
+  <p>たとえば temperature を下げるとコストの低い候補だけを信じるようになり、反応は鋭くなるがガタつきやすくなる。batch_size を増やすと良い候補を引ける確率が上がるが、計算が重くなる。図 10 のデモで \(\lambda\) と \(K\) を動かしたときの変化は、これらのパラメータを大きく・小さくしたときの効き方の目安になる。ただし、コストの大きさが違うので、\(\lambda\) の値そのものは Nav2 の temperature とは比べられない。</p>
+</section>
+
+<section id="notation">
+  <h2>記号の一覧</h2>
+  <div class="table-wrap">
+    <table class="stack">
+      <thead><tr><th scope="col">記号</th><th scope="col">読み</th><th scope="col">意味</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">\(n\)</th><td data-label="読み">—</td><td data-label="意味">予測の中のステップ番号（今を 0 とする）</td></tr>
+        <tr><th scope="row">\(\Delta t\)</th><td data-label="読み">デルタ t</td><td data-label="意味">1&nbsp;ステップの時間</td></tr>
+        <tr><th scope="row">\(N\)</th><td data-label="読み">—</td><td data-label="意味">予測ホライズン（何ステップ先まで予測するか）</td></tr>
+        <tr><th scope="row">\(x_n,\ u_n\)</th><td data-label="読み">—</td><td data-label="意味">\(n\) ステップ目の状態（位置）と入力（速度の指令）</td></tr>
+        <tr><th scope="row">\(g,\ d\)</th><td data-label="読み">—</td><td data-label="意味">目標の位置と、今のずれ \(d = x_0 - g\)</td></tr>
+        <tr><th scope="row">\(J,\ S\)</th><td data-label="読み">—</td><td data-label="意味">コスト（小さいほど良い）</td></tr>
+        <tr><th scope="row">\(\rho\)</th><td data-label="読み">ロー</td><td data-label="意味">入力の大きさにかける重み</td></tr>
+        <tr><th scope="row">\(G\)</th><td data-label="読み">—</td><td data-label="意味">1&nbsp;手先の MPC の比例の係数 \(\Delta t/(\Delta t^2 + \rho)\)</td></tr>
+        <tr><th scope="row">\(u_{\max}\)</th><td data-label="読み">—</td><td data-label="意味">入力の上限</td></tr>
+        <tr><th scope="row">\(\alpha\)</th><td data-label="読み">アルファ</td><td data-label="意味">勾配降下法の歩幅</td></tr>
+        <tr><th scope="row">\(\theta\)</th><td data-label="読み">シータ</td><td data-label="意味">2&nbsp;輪ロボットの向き</td></tr>
+        <tr><th scope="row">\(v,\ \omega\)</th><td data-label="読み">ブイ、オメガ</td><td data-label="意味">前に進む速さと、角速度</td></tr>
+        <tr><th scope="row">\(K,\ k\)</th><td data-label="読み">—</td><td data-label="意味">MPPI の候補の数と、候補の番号（右肩の \((k)\)）</td></tr>
+        <tr><th scope="row">\(\varepsilon^{(k)}\)</th><td data-label="読み">イプシロン</td><td data-label="意味">\(k\) 番目の候補のゆらぎ</td></tr>
+        <tr><th scope="row">\(\sigma\)</th><td data-label="読み">シグマ</td><td data-label="意味">ゆらぎの標準偏差</td></tr>
+        <tr><th scope="row">\(S^{(k)},\ S_{\min}\)</th><td data-label="読み">—</td><td data-label="意味">\(k\) 番目の候補のコストと、その最小値</td></tr>
+        <tr><th scope="row">\(w^{(k)}\)</th><td data-label="読み">—</td><td data-label="意味">\(k\) 番目の候補の重み</td></tr>
+        <tr><th scope="row">\(\lambda\)</th><td data-label="読み">ラムダ</td><td data-label="意味">温度</td></tr>
+        <tr><th scope="row">\(\bar u\)</th><td data-label="読み">ユーバー</td><td data-label="意味">今の案（発展の節で使う）</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="glossary">
+  <h2>用語集</h2>
+  <dl class="glossary">
+    <dt>モデル予測制御（MPC）</dt>
+    <dd>モデルで未来を予測し、コストが最小になる入力の列を求め、最初の 1&nbsp;手だけ実行することをくり返す制御。</dd>
+    <dt>MPPI（Model Predictive Path Integral control）</dt>
+    <dd>MPC の一種。入力をランダムにばらまいた候補をモデルで走らせ、コストから計算した重みで平均して、入力の列を更新する。名前の Path Integral（経路積分）は、導出のもとになった経路積分制御の理論に由来する。</dd>
+    <dt>状態と入力</dt>
+    <dd>状態は今の様子（位置、向き、速度など）。入力はこちらが決められる量（速度の指令、モーターの出力など）。</dd>
+    <dt>モデル</dt>
+    <dd>今の状態と入力から、次の状態を計算する式。この資料では漸化式。</dd>
+    <dt>予測ホライズン</dt>
+    <dd>何ステップ先まで予測するか。ステップ数 \(N\) と 1&nbsp;ステップの時間 \(\Delta t\) の積が、予測する時間になる。</dd>
+    <dt>コスト関数</dt>
+    <dd>計画の悪さを表す数。小さいほど良い。</dd>
+    <dt>Receding horizon（後退ホライズン）</dt>
+    <dd>先まで計画し、最初の一部だけ実行して計画し直すことをくり返す方式。</dd>
+    <dt>P 制御（比例制御）</dt>
+    <dd>目標とのずれに比例した入力を出す制御。</dd>
+    <dt>制約</dt>
+    <dd>入力の上限など、守らなければならない条件。</dd>
+    <dt>2&nbsp;次計画問題（QP）</dt>
+    <dd>2&nbsp;次関数を、1&nbsp;次式で書いた制約のもとで最小にする問題。制約のある MPC は、毎周期これを解くことが多い。</dd>
+    <dt>勾配降下法</dt>
+    <dd>傾き（微分）と逆の向きに少しずつ動かして、関数の最小値を探す方法。</dd>
+    <dt>局所解</dt>
+    <dd>まわりの中では最小だが、全体では最小でない点。</dd>
+    <dt>ロールアウト</dt>
+    <dd>ある入力の列でモデルを先まで計算し、軌跡を予測すること。</dd>
+    <dt>温度</dt>
+    <dd>MPPI で、コストの差をどれだけ重く見るかを決める数 \(\lambda\)。小さいほど、低コストの候補に重みが集中する。</dd>
+    <dt>ソフトマックス</dt>
+    <dd>数の組を、指数関数で正の数にしてから、合計が 1 になるように割る変換。MPPI の重みは \(-S/\lambda\) のソフトマックス。</dd>
+    <dt>ウォームスタート</dt>
+    <dd>前回の答えを出発点にして、次の最適化を始めること。</dd>
+    <dt>差動 2&nbsp;輪</dt>
+    <dd>左右の車輪の速さの差で曲がる、移動ロボットの方式。</dd>
+  </dl>
+</section>
+
+<section id="refs">
+  <h2>参考文献</h2>
+  <ul class="refs">
+    <li>G. Williams, P. Drews, B. Goldfain, J. M. Rehg, E. A. Theodorou. “Aggressive Driving with Model Predictive Path Integral Control.” ICRA 2016.</li>
+    <li>G. Williams, N. Wagener, B. Goldfain, P. Drews, J. M. Rehg, B. Boots, E. A. Theodorou. “Information Theoretic MPC for Model-Based Reinforcement Learning.” ICRA 2017, pp. 1714–1721. <a href="https://doi.org/10.1109/ICRA.2017.7989202">doi:10.1109/ICRA.2017.7989202</a>（<a href="https://homes.cs.washington.edu/~bboots/files/InformationTheoreticMPC.pdf">PDF</a>）</li>
+    <li>G. Williams, P. Drews, B. Goldfain, J. M. Rehg, E. A. Theodorou. “Information-Theoretic Model Predictive Control: Theory and Applications to Autonomous Driving.” IEEE Transactions on Robotics, vol. 34, no. 6, pp. 1603–1622, 2018. <a href="https://doi.org/10.1109/TRO.2018.2865891">doi:10.1109/TRO.2018.2865891</a></li>
+    <li>J. B. Rawlings, D. Q. Mayne, M. M. Diehl. <i>Model Predictive Control: Theory, Computation, and Design</i>, 2nd ed. Nob Hill Publishing, 2017.</li>
+    <li>Nav2. “Model Predictive Path Integral Controller”（設定ガイド、Jazzy）. <a href="https://docs.nav2.org/jazzy/configuration_and_development/configuration_guide/controller_plugins/mppi_controller/configuring_mppic/">docs.nav2.org</a></li>
+    <li>nav2_mppi_controller README（ROS 2 Jazzy）. <a href="https://docs.ros.org/en/jazzy/p/nav2_mppi_controller">docs.ros.org</a></li>
+  </ul>
+</section>
+
+<footer class="foot">
+  <p>MPC と MPPI の考え方を高校数学の範囲で説明するために、モデルと記号を単純化した。数値例、図、デモはすべてこの資料のために作ったもので、論文の図は転載していない。Nav2 のパラメータ名と既定値は、Nav2（Jazzy）の設定ガイドによる。2026&nbsp;年 11&nbsp;月 6&nbsp;日作成。</p>
+</footer>
+
+</main>
+</div>
+
+<script>
+// 2輪ロボットの MPPI デモの中身（ブラウザと Node の両方で動く）
+(function (root) {
+  'use strict';
+
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function makeNormal(rand) {
+    let spare = null;
+    return function () {
+      if (spare !== null) { const s = spare; spare = null; return s; }
+      let u, v, r;
+      do { u = rand() * 2 - 1; v = rand() * 2 - 1; r = u * u + v * v; } while (r === 0 || r >= 1);
+      const m = Math.sqrt(-2 * Math.log(r) / r);
+      spare = v * m;
+      return u * m;
+    };
+  }
+
+  const P = {
+    dt: 0.1, N: 30,
+    vMin: 0.0, vMax: 1.0, wMax: 1.5,
+    rRobot: 0.25, rPerson: 0.3,
+    start: { x: 1.0, y: 0.0, th: 0.0 },
+    goal: { x: 9.0, y: 0.0 },
+    yWall: 2.75,
+    qGoal: 1.0, qTerm: 6.0, qPs: 30.0, psRange: 0.6, hit: 1000.0, qW: 0.05,
+    goalTol: 0.2
+  };
+
+  const SCENES = {
+    still: [{ x: 5.0, y: 0.15, vx: 0, vy: 0 }],
+    cross: [{ x: 5.5, y: -2.3, vx: 0, vy: 0.5, bounceY: 2.3 }],
+    two: [
+      { x: 4.0, y: -0.45, vx: 0, vy: 0 },
+      { x: 8.6, y: 0.5, vx: -0.4, vy: 0, minX: 1.5 }
+    ]
+  };
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+  function createSim(opts) {
+    const o = Object.assign({ scene: 'still', lambda: 1.0, sigmaW: 0.8, K: 300, seed: 1 }, opts || {});
+    const N = P.N;
+    const sim = {
+      opts: o,
+      rand: null, randn: null,
+      state: null, people: null, t: 0,
+      uV: new Float64Array(N), uW: new Float64Array(N),
+      // サンプル保存用（描画に使う）
+      K: 0, eV: null, eW: null, S: null, w: null, trajX: null, trajY: null,
+      meanX: new Float64Array(N + 1), meanY: new Float64Array(N + 1),
+      trail: [], arrived: false, contacts: 0, inContact: false, minClear: Infinity,
+      lastSmin: 0, lastEss: 0
+    };
+
+    sim.reset = function () {
+      sim.rand = mulberry32(o.seed);
+      sim.randn = makeNormal(sim.rand);
+      sim.state = { x: P.start.x, y: P.start.y, th: P.start.th };
+      sim.people = SCENES[o.scene].map(function (p) { return Object.assign({}, p); });
+      sim.t = 0;
+      sim.uV.fill(0.5);
+      sim.uW.fill(0.0);
+      sim.trail = [{ x: sim.state.x, y: sim.state.y }];
+      sim.arrived = false; sim.contacts = 0; sim.inContact = false; sim.minClear = Infinity;
+      sim.allocate(o.K);
+      // 最初の計画を少し磨いてから始める（ウォームアップ）
+      for (let i = 0; i < 5; i++) sim.optimize();
+    };
+
+    sim.allocate = function (K) {
+      sim.K = K;
+      sim.eV = new Float64Array(K * N); sim.eW = new Float64Array(K * N);
+      sim.S = new Float64Array(K); sim.w = new Float64Array(K);
+      sim.trajX = new Float64Array(K * (N + 1)); sim.trajY = new Float64Array(K * (N + 1));
+    };
+
+    function stepCost(x, y, w, n) {
+      const tF = (n + 1) * P.dt;
+      let c = P.qGoal * Math.hypot(x - P.goal.x, y - P.goal.y) + P.qW * w * w;
+      const rc = P.rRobot + P.rPerson;
+      for (let i = 0; i < sim.people.length; i++) {
+        const p = sim.people[i];
+        const d = Math.hypot(x - (p.x + p.vx * tF), y - (p.y + p.vy * tF));
+        if (d < rc) c += P.hit;
+        else if (d < rc + P.psRange) { const s = rc + P.psRange - d; c += P.qPs * s * s; }
+      }
+      if (Math.abs(y) > P.yWall - P.rRobot) c += P.hit;
+      return c;
+    }
+
+    // 入力の列 (v, w) でロールアウトしてコストを返す。軌跡は ox, oy に書く（null なら書かない）
+    function rollout(vArr, wArr, vOff, ox, oy, oOff) {
+      let x = sim.state.x, y = sim.state.y, th = sim.state.th, S = 0;
+      if (ox) { ox[oOff] = x; oy[oOff] = y; }
+      for (let n = 0; n < N; n++) {
+        const v = vArr[vOff + n], w = wArr[vOff + n];
+        x += v * Math.cos(th) * P.dt;
+        y += v * Math.sin(th) * P.dt;
+        th += w * P.dt;
+        S += stepCost(x, y, w, n);
+        if (ox) { ox[oOff + n + 1] = x; oy[oOff + n + 1] = y; }
+      }
+      S += P.qTerm * Math.hypot(x - P.goal.x, y - P.goal.y);
+      return S;
+    }
+
+    sim.optimize = function () {
+      if (sim.K !== o.K) sim.allocate(o.K);
+      const K = sim.K, sV = o.sigmaW * 0.35, sW = o.sigmaW;
+      const cV = new Float64Array(K * N), cW = new Float64Array(K * N);
+      for (let k = 0; k < K; k++) {
+        for (let n = 0; n < N; n++) {
+          const i = k * N + n;
+          // 候補の入力（上限で切り詰める）と、実際に効いたゆらぎ
+          const v = clamp(sim.uV[n] + sV * sim.randn(), P.vMin, P.vMax);
+          const w = clamp(sim.uW[n] + sW * sim.randn(), -P.wMax, P.wMax);
+          cV[i] = v; cW[i] = w;
+          sim.eV[i] = v - sim.uV[n]; sim.eW[i] = w - sim.uW[n];
+        }
+        sim.S[k] = rollout(cV, cW, k * N, sim.trajX, sim.trajY, k * (N + 1));
+      }
+      let Smin = Infinity;
+      for (let k = 0; k < K; k++) if (sim.S[k] < Smin) Smin = sim.S[k];
+      let eta = 0;
+      for (let k = 0; k < K; k++) { sim.w[k] = Math.exp(-(sim.S[k] - Smin) / o.lambda); eta += sim.w[k]; }
+      let sq = 0;
+      for (let k = 0; k < K; k++) { sim.w[k] /= eta; sq += sim.w[k] * sim.w[k]; }
+      for (let n = 0; n < N; n++) {
+        let dv = 0, dw = 0;
+        for (let k = 0; k < K; k++) { dv += sim.w[k] * sim.eV[k * N + n]; dw += sim.w[k] * sim.eW[k * N + n]; }
+        sim.uV[n] = clamp(sim.uV[n] + dv, P.vMin, P.vMax);
+        sim.uW[n] = clamp(sim.uW[n] + dw, -P.wMax, P.wMax);
+      }
+      rollout(sim.uV, sim.uW, 0, sim.meanX, sim.meanY, 0);
+      sim.lastSmin = Smin;
+      sim.lastEss = 1 / sq;
+    };
+
+    function movePeople() {
+      for (let i = 0; i < sim.people.length; i++) {
+        const p = sim.people[i];
+        p.x += p.vx * P.dt; p.y += p.vy * P.dt;
+        if (p.bounceY !== undefined && Math.abs(p.y) > p.bounceY) { p.vy = -p.vy; p.y = clamp(p.y, -p.bounceY, p.bounceY); }
+        if (p.minX !== undefined && p.x < p.minX) { p.x = p.minX; p.vx = 0; }
+      }
+    }
+
+    // 1 周期：最初の 1 手を実行し、時間を進め、案をずらして最適化し直す
+    sim.step = function () {
+      if (sim.arrived) return;
+      const v = sim.uV[0], w = sim.uW[0], s = sim.state;
+      s.x += v * Math.cos(s.th) * P.dt;
+      s.y += v * Math.sin(s.th) * P.dt;
+      s.th += w * P.dt;
+      movePeople();
+      sim.t += P.dt;
+      sim.trail.push({ x: s.x, y: s.y });
+      const rc = P.rRobot + P.rPerson;
+      let touching = false;
+      for (let i = 0; i < sim.people.length; i++) {
+        const p = sim.people[i];
+        const d = Math.hypot(s.x - p.x, s.y - p.y) - rc;
+        if (d < sim.minClear) sim.minClear = d;
+        if (d < 0) touching = true;
+      }
+      if (touching && !sim.inContact) sim.contacts++;
+      sim.inContact = touching;
+      if (Math.hypot(s.x - P.goal.x, s.y - P.goal.y) < P.goalTol) { sim.arrived = true; return; }
+      for (let n = 0; n < N - 1; n++) { sim.uV[n] = sim.uV[n + 1]; sim.uW[n] = sim.uW[n + 1]; }
+      sim.optimize();
+    };
+
+    sim.reset();
+    return sim;
+  }
+
+  root.MPPICore = { P: P, SCENES: SCENES, createSim: createSim, mulberry32: mulberry32, makeNormal: makeNormal };
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>
+(function () {
+  'use strict';
+  var doc = document;
+  var MINUS = '−';
+  function fmt(x, d) {
+    var s = Math.abs(x).toFixed(d);
+    return (x < 0 && Number(s) !== 0 ? MINUS : '') + s;
+  }
+  function cssVar(name) { return getComputedStyle(doc.documentElement).getPropertyValue(name).trim(); }
+
+  // ---- 数式（KaTeX の auto-render）
+  doc.addEventListener('DOMContentLoaded', function () {
+    if (!window.renderMathInElement) { return; }
+    window.renderMathInElement(doc.body, {
+      delimiters: [
+        { left: '\\[', right: '\\]', display: true },
+        { left: '\\(', right: '\\)', display: false }
+      ],
+      throwOnError: false,
+      ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option', 'svg', 'canvas']
+    });
+  });
+
+  // ---- 目次の現在地
+  var railLinks = Array.prototype.slice.call(doc.querySelectorAll('.toc-rail a'));
+  if ('IntersectionObserver' in window && railLinks.length) {
+    var byId = {};
+    railLinks.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+    var tocObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) { return; }
+        railLinks.forEach(function (a) { a.removeAttribute('aria-current'); });
+        var link = byId[entry.target.id];
+        if (link) { link.setAttribute('aria-current', 'true'); }
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    doc.querySelectorAll('main section[id]').forEach(function (sec) { tocObserver.observe(sec); });
+  }
+  doc.querySelectorAll('.toc-mobile a').forEach(function (a) {
+    a.addEventListener('click', function () {
+      var details = a.closest('details');
+      if (details) { details.open = false; }
+    });
+  });
+
+  // ---- 図 5：入力の上限（定義域つきの最小値）
+  (function () {
+    var root = doc.getElementById('fig-constraint');
+    if (!root) { return; }
+    var svg = root.querySelector('[data-plot]');
+    var inD = root.querySelector('#c-d');
+    var inU = root.querySelector('#c-umax');
+    var outD = root.querySelector('[data-out="d"]');
+    var outU = root.querySelector('[data-out="umax"]');
+    var note = root.querySelector('[data-note]');
+    var X0 = 40, X1 = 380, Y0 = 196, Y1 = 26, U0 = -5, U1 = 5, JM = 32;
+    function px(u) { return X0 + (u - U0) / (U1 - U0) * (X1 - X0); }
+    function py(j) { return Y0 - j / JM * (Y0 - Y1); }
+    var ticks = '';
+    for (var u = -4; u <= 4; u += 2) {
+      ticks += '<text x="' + px(u) + '" y="214" text-anchor="middle">' + fmt(u, 0) + '</text>';
+    }
+    var grid = '';
+    [8, 16, 24, 32].forEach(function (j) {
+      grid += '<line class="grid" x1="' + X0 + '" y1="' + py(j) + '" x2="' + X1 + '" y2="' + py(j) + '"/>';
+    });
+    function render() {
+      var d = Number(inD.value);
+      var um = Number(inU.value);
+      var v = -d / 2;
+      var us = Math.max(-um, Math.min(um, v));
+      var js = 2 * (us - v) * (us - v);
+      var lo = Math.max(U0, v - 4), hi = Math.min(U1, v + 4);
+      var pts = [];
+      for (var i = 0; i <= 120; i++) {
+        var uu = lo + (hi - lo) * i / 120;
+        pts.push(px(uu).toFixed(1) + ',' + py(2 * (uu - v) * (uu - v)).toFixed(1));
+      }
+      var a = px(-um), b = px(um);
+      var cx = px(us), cy = py(js);
+      var outside = Math.abs(v) > um + 1e-9;
+      // ラベルは放物線の内側（頂点のある側）の上に置く
+      var lx = cx, ly = cy - 14, anchor = 'middle';
+      if (us < v - 1e-9) { lx = cx + 10; ly = cy - 14; anchor = 'start'; }
+      else if (us > v + 1e-9) { lx = cx - 10; ly = cy - 14; anchor = 'end'; }
+      svg.innerHTML =
+        grid +
+        '<rect class="allowed" x="' + a + '" y="' + Y1 + '" width="' + (b - a) + '" height="' + (Y0 - Y1) + '"/>' +
+        '<line class="edge" x1="' + a + '" y1="' + Y1 + '" x2="' + a + '" y2="' + Y0 + '"/>' +
+        '<line class="edge" x1="' + b + '" y1="' + Y1 + '" x2="' + b + '" y2="' + Y0 + '"/>' +
+        '<line class="axis" x1="' + X0 + '" y1="' + Y0 + '" x2="' + X1 + '" y2="' + Y0 + '"/>' +
+        '<g class="tick">' + ticks + '</g>' +
+        '<text class="ax-lab" x="' + X1 + '" y="232" text-anchor="end">入力 <tspan class="mi">u</tspan></text>' +
+        '<text class="ax-lab" x="4" y="14">コスト <tspan class="mi">J</tspan>（定数項を除く）</text>' +
+        '<text class="t-2" x="' + px(0) + '" y="' + (Y1 - 8) + '" text-anchor="middle" style="fill: var(--mpc)">出せる範囲</text>' +
+        '<polyline class="curve" points="' + pts.join(' ') + '"/>' +
+        '<line class="guide" x1="' + cx + '" y1="' + cy + '" x2="' + cx + '" y2="' + Y0 + '"/>' +
+        '<circle class="hollow" cx="' + px(v) + '" cy="' + Y0 + '" r="5"/>' +
+        '<circle class="pick" cx="' + cx + '" cy="' + cy + '" r="6"/>' +
+        '<text class="t" x="' + lx + '" y="' + ly + '" text-anchor="' + anchor + '"><tspan class="mi">u</tspan>* = ' + fmt(us, 2) + '</text>';
+      outD.textContent = fmt(d, 1);
+      outU.textContent = fmt(um, 2);
+      var vs = fmt(v, 2);
+      if (!outside) {
+        note.innerHTML = '頂点 <i>u</i> = ' + vs + ' は範囲の中にあるので、頂点をそのまま選ぶ（<i>u</i>* = ' + fmt(us, 2) + '）。';
+      } else if (v > 0) {
+        note.innerHTML = '頂点 <i>u</i> = ' + vs + ' は範囲より右にあるので、範囲の中でいちばん右の <i>u</i>* = ' + fmt(um, 2) + ' を選ぶ。';
+      } else {
+        note.innerHTML = '頂点 <i>u</i> = ' + vs + ' は範囲より左にあるので、範囲の中でいちばん左の <i>u</i>* = ' + fmt(-um, 2) + ' を選ぶ。';
+      }
+    }
+    inD.addEventListener('input', render);
+    inU.addEventListener('input', render);
+    render();
+  })();
+
+  // ---- 図 9：MPPI の重み（1 手先の例）
+  (function () {
+    var root = doc.getElementById('fig-weights');
+    if (!root || !window.MPPICore) { return; }
+    var svg = root.querySelector('[data-plot]');
+    var inL = root.querySelector('#w-lam');
+    var inS = root.querySelector('#w-sig');
+    var inK = root.querySelector('#w-k');
+    var outL = root.querySelector('[data-out="lam"]');
+    var outS = root.querySelector('[data-out="sig"]');
+    var rMean = root.querySelector('[data-r="mean"]');
+    var rEss = root.querySelector('[data-r="ess"]');
+    var rTh = root.querySelector('[data-r="theory"]');
+    var BASE_Z = [-0.5, 0.25, 0.5, 1.25, 2.0]; // σ = 2 のとき -1, 0.5, 1, 2.5, 4
+    var seed = 0;
+    var Z = [];
+    function drawZ() {
+      var K = Number(inK.value);
+      var randn = window.MPPICore.makeNormal(window.MPPICore.mulberry32(1000 + seed));
+      Z = [];
+      for (var k = 0; k < K; k++) { Z.push(seed === 0 && k < 5 ? BASE_Z[k] : randn()); }
+    }
+    var X0 = 36, X1 = 384, U0 = -5, U1 = 7, TOP = 26, BOT = 170, SMAX = 60, WB = 264, WH = 56;
+    function px(u) { return X0 + (u - U0) / (U1 - U0) * (X1 - X0); }
+    function py(s) { return BOT - Math.min(s, SMAX) / SMAX * (BOT - TOP); }
+    function S(u) { return 2 * (u - 2) * (u - 2) + 8; }
+    var curve = [];
+    for (var i = 0; i <= 200; i++) {
+      var u = U0 + (U1 - U0) * i / 200;
+      if (S(u) <= SMAX) { curve.push(px(u).toFixed(1) + ',' + py(S(u)).toFixed(1)); }
+    }
+    var stat = '';
+    [20, 40, 60].forEach(function (s) {
+      stat += '<line class="grid" x1="' + X0 + '" y1="' + py(s) + '" x2="' + X1 + '" y2="' + py(s) + '"/>' +
+        '<text class="tick" x="' + (X0 - 6) + '" y="' + (py(s) + 4) + '" text-anchor="end">' + s + '</text>';
+    });
+    stat += '<line class="axis" x1="' + X0 + '" y1="' + BOT + '" x2="' + X1 + '" y2="' + BOT + '"/>' +
+      '<text class="tick" x="' + (X0 - 6) + '" y="' + (BOT + 4) + '" text-anchor="end">0</text>' +
+      '<line class="axis" x1="' + X0 + '" y1="' + WB + '" x2="' + X1 + '" y2="' + WB + '"/>' +
+      '<text class="ax-lab" x="4" y="14">コスト <tspan class="mi">S</tspan></text>' +
+      '<text class="ax-lab" x="4" y="' + (WB - WH - 8) + '">重み <tspan class="mi">w</tspan></text>' +
+      '<text class="ax-lab" x="' + X1 + '" y="' + (WB + 32) + '" text-anchor="end">候補の入力 <tspan class="mi">u</tspan></text>';
+    for (var t = -4; t <= 6; t += 2) {
+      stat += '<text class="tick" x="' + px(t) + '" y="' + (WB + 16) + '" text-anchor="middle">' + (t === 0 ? '0（今の案）' : fmt(t, 0)) + '</text>';
+    }
+    stat += '<polyline class="curve" points="' + curve.join(' ') + '"/>';
+    function fmtLam(l) { return l < 10 ? l.toFixed(2) : l.toFixed(0); }
+    function render() {
+      var lam = Math.pow(10, Number(inL.value));
+      var sig = Number(inS.value);
+      var K = Z.length;
+      var us = Z.map(function (z) { return sig * z; });
+      var Ss = us.map(S);
+      var Smin = Infinity;
+      Ss.forEach(function (s) { if (s < Smin) { Smin = s; } });
+      var e = Ss.map(function (s) { return Math.exp(-(s - Smin) / lam); });
+      var eta = e.reduce(function (p, c) { return p + c; }, 0);
+      var w = e.map(function (x) { return x / eta; });
+      var mean = 0, sq = 0, wmax = 0;
+      for (var k = 0; k < K; k++) { mean += w[k] * us[k]; sq += w[k] * w[k]; if (w[k] > wmax) { wmax = w[k]; } }
+      var th = 8 * sig * sig / (lam + 4 * sig * sig);
+      var idx = us.map(function (_, j) { return j; }).sort(function (a, b) { return w[a] - w[b]; });
+      var few = K <= 20;
+      var dots = '', bars = '';
+      idx.forEach(function (j) {
+        var tw = w[j] / wmax;
+        var visible = Ss[j] <= SMAX && us[j] >= U0 && us[j] <= U1;
+        var x = px(Math.max(U0, Math.min(U1, us[j]))).toFixed(1);
+        var y = py(Ss[j]).toFixed(1);
+        var r = (few ? 4 + 4 * Math.sqrt(tw) : 1.5 + 2.5 * Math.sqrt(tw)).toFixed(1);
+        var op = few ? (tw < 0.01 ? 0.8 : 0.35 + 0.65 * tw) : (tw < 0.01 ? 0.25 : 0.2 + 0.6 * tw);
+        var style = 'fill-opacity: ' + op.toFixed(2) + '; stroke-width: ' + (few ? 2 : 0) + 'px' + (tw < 0.01 ? '; fill: var(--deemph)' : '');
+        if (visible || few) dots += '<circle class="dot mppi" cx="' + x + '" cy="' + y + '" r="' + r + '" style="' + style + '"><title>u = ' + fmt(us[j], 2) + '、S = ' + Ss[j].toFixed(2) + '、w = ' + w[j].toFixed(4) + '</title></circle>';
+        if (tw >= 0.005) {
+          bars += '<line class="wbar" x1="' + x + '" y1="' + WB + '" x2="' + x + '" y2="' + (WB - WH * tw).toFixed(1) + '" style="stroke-width: ' + (few ? 3 : 1.5) + 'px; stroke-opacity: ' + (few ? 1 : 0.6) + '"/>';
+        }
+      });
+      var mX = px(Math.max(U0, Math.min(U1, mean))).toFixed(1);
+      var tX = px(th).toFixed(1);
+      svg.innerHTML = stat +
+        '<line class="ref" x1="' + px(2) + '" y1="' + (TOP - 8) + '" x2="' + px(2) + '" y2="' + WB + '"/>' +
+        '<line class="theory-line" x1="' + tX + '" y1="' + (TOP - 8) + '" x2="' + tX + '" y2="' + WB + '"/>' +
+        bars +
+        '<line class="mean-line" x1="' + mX + '" y1="' + (TOP - 8) + '" x2="' + mX + '" y2="' + WB + '"/>' +
+        dots;
+      outL.textContent = fmtLam(lam);
+      outS.textContent = sig.toFixed(1);
+      rMean.textContent = fmt(mean, 2);
+      rEss.textContent = (1 / sq).toFixed(1);
+      rTh.textContent = fmt(th, 2);
+    }
+    inL.addEventListener('input', render);
+    inS.addEventListener('input', render);
+    inK.addEventListener('change', function () { drawZ(); render(); });
+    root.querySelector('[data-resample]').addEventListener('click', function () { seed += 1; drawZ(); render(); });
+    drawZ();
+    render();
+  })();
+
+  // ---- 図 10：2 輪ロボットの MPPI デモ
+  (function () {
+    var root = doc.getElementById('fig-demo');
+    if (!root || !window.MPPICore) { return; }
+    var C = window.MPPICore, P = C.P;
+    var canvas = root.querySelector('canvas');
+    var ctx = canvas.getContext('2d');
+    if (!ctx) { return; }
+    var KS = [20, 50, 100, 300, 1000];
+    function q(s) { return root.querySelector(s); }
+    var btnPlay = q('[data-play]'), btnStep = q('[data-step]'), btnReset = q('[data-reset]'), selScene = q('[data-scene]');
+    var inL = q('#d-lam'), inS = q('#d-sig'), inK = q('#d-k');
+    var outL = q('[data-out="lam"]'), outS = q('[data-out="sig"]'), outK = q('[data-out="k"]');
+    function rd(name) { return q('[data-r="' + name + '"]'); }
+    var TIME_LIMIT = 40;
+    var seed = 7;
+    function params() {
+      return { scene: selScene.value, lambda: Math.pow(10, Number(inL.value)), sigmaW: Number(inS.value), K: KS[Number(inK.value)], seed: seed };
+    }
+    var sim = C.createSim(params());
+    var playing = false, raf = 0, last = 0, doneAt = 0, userPaused = false;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function fmtLam(l) { return l < 0.1 ? l.toFixed(3) : (l < 10 ? l.toFixed(2) : l.toFixed(0)); }
+    function syncOutputs() {
+      var p = params();
+      outL.textContent = fmtLam(p.lambda);
+      outS.textContent = p.sigmaW.toFixed(2);
+      outK.textContent = String(p.K);
+    }
+    function finished() { return sim.arrived || sim.t >= TIME_LIMIT - 1e-9; }
+    function readout() {
+      rd('t').textContent = sim.t.toFixed(1);
+      rd('v').textContent = (finished() ? 0 : sim.uV[0]).toFixed(2);
+      rd('w').textContent = fmt(finished() ? 0 : sim.uW[0], 2);
+      rd('ess').textContent = sim.lastEss.toFixed(1) + ' / ' + sim.K;
+      rd('hit').textContent = String(sim.contacts);
+      rd('status').textContent = sim.arrived ? 'ゴール到着' : (sim.t >= TIME_LIMIT - 1e-9 ? '時間切れ' : '');
+    }
+    function draw() {
+      var Wc = canvas.width, Hc = canvas.height;
+      var k = Wc / Math.max(1, canvas.clientWidth || Wc);
+      var s = Wc / 10;
+      function X(x) { return x * s; }
+      function Y(y) { return (3 - y) * s; }
+      var col = {
+        floor: cssVar('--scene-floor'), wall: cssVar('--scene-wall'), grid: cssVar('--rule'),
+        ink: cssVar('--ink'), ink2: cssVar('--ink-2'), mppi: cssVar('--mppi'), deemph: cssVar('--deemph'), surface: cssVar('--surface')
+      };
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.fillStyle = col.floor;
+      ctx.fillRect(0, 0, Wc, Hc);
+      ctx.fillStyle = col.wall;
+      ctx.fillRect(0, 0, Wc, Y(P.yWall));
+      ctx.fillRect(0, Y(-P.yWall), Wc, Hc - Y(-P.yWall));
+      ctx.strokeStyle = col.grid;
+      ctx.lineWidth = k;
+      ctx.beginPath();
+      for (var gx = 1; gx < 10; gx++) { ctx.moveTo(X(gx), Y(P.yWall)); ctx.lineTo(X(gx), Y(-P.yWall)); }
+      for (var gy = -2; gy <= 2; gy++) { ctx.moveTo(0, Y(gy)); ctx.lineTo(Wc, Y(gy)); }
+      ctx.stroke();
+
+      var g = P.goal, gs = 0.2;
+      ctx.strokeStyle = col.ink;
+      ctx.lineWidth = 2.5 * k;
+      ctx.beginPath();
+      ctx.moveTo(X(g.x - gs), Y(g.y - gs)); ctx.lineTo(X(g.x + gs), Y(g.y + gs));
+      ctx.moveTo(X(g.x - gs), Y(g.y + gs)); ctx.lineTo(X(g.x + gs), Y(g.y - gs));
+      ctx.stroke();
+
+      var K = sim.K, N = P.N;
+      if (!finished()) {
+        var wmax = 0;
+        for (var i = 0; i < K; i++) { if (sim.w[i] > wmax) { wmax = sim.w[i]; } }
+        var order = [];
+        for (var j = 0; j < K; j++) { order.push(j); }
+        order.sort(function (a, b) { return sim.w[a] - sim.w[b]; });
+        order.forEach(function (idx) {
+          var t = wmax > 0 ? sim.w[idx] / wmax : 0;
+          if (t < 0.01) { ctx.strokeStyle = col.deemph; ctx.globalAlpha = 0.18; ctx.lineWidth = k; }
+          else { ctx.strokeStyle = col.mppi; ctx.globalAlpha = 0.2 + 0.8 * t; ctx.lineWidth = (1 + 1.5 * t) * k; }
+          var o = idx * (N + 1);
+          ctx.beginPath();
+          ctx.moveTo(X(sim.trajX[o]), Y(sim.trajY[o]));
+          for (var n = 1; n <= N; n++) { ctx.lineTo(X(sim.trajX[o + n]), Y(sim.trajY[o + n])); }
+          ctx.stroke();
+        });
+        ctx.globalAlpha = 1;
+      }
+
+      var rc = P.rRobot + P.rPerson;
+      var tH = N * P.dt;
+      sim.people.forEach(function (p) {
+        if (p.vx || p.vy) {
+          var fx = p.x + p.vx * tH, fy = p.y + p.vy * tH;
+          ctx.globalAlpha = 0.3;
+          ctx.fillStyle = col.deemph;
+          ctx.beginPath(); ctx.arc(X(fx), Y(fy), P.rPerson * s, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.setLineDash([2 * k, 4 * k]);
+          ctx.strokeStyle = col.deemph;
+          ctx.lineWidth = 1.5 * k;
+          ctx.beginPath(); ctx.moveTo(X(p.x), Y(p.y)); ctx.lineTo(X(fx), Y(fy)); ctx.stroke();
+        }
+        ctx.setLineDash([3 * k, 3 * k]);
+        ctx.strokeStyle = col.deemph;
+        ctx.lineWidth = k;
+        ctx.beginPath(); ctx.arc(X(p.x), Y(p.y), (rc + P.psRange) * s, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = col.deemph;
+        ctx.beginPath(); ctx.arc(X(p.x), Y(p.y), P.rPerson * s, 0, Math.PI * 2); ctx.fill();
+      });
+
+      ctx.strokeStyle = col.ink2;
+      ctx.lineWidth = 1.5 * k;
+      ctx.setLineDash([4 * k, 4 * k]);
+      ctx.beginPath();
+      sim.trail.forEach(function (pt, ti) { if (ti === 0) { ctx.moveTo(X(pt.x), Y(pt.y)); } else { ctx.lineTo(X(pt.x), Y(pt.y)); } });
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      if (!finished()) {
+        ctx.strokeStyle = col.ink;
+        ctx.lineWidth = 3 * k;
+        ctx.beginPath();
+        ctx.moveTo(X(sim.meanX[0]), Y(sim.meanY[0]));
+        for (var m = 1; m <= N; m++) { ctx.lineTo(X(sim.meanX[m]), Y(sim.meanY[m])); }
+        ctx.stroke();
+      }
+
+      var st = sim.state;
+      ctx.fillStyle = col.surface;
+      ctx.strokeStyle = col.ink;
+      ctx.lineWidth = 2 * k;
+      ctx.beginPath(); ctx.arc(X(st.x), Y(st.y), P.rRobot * s, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(X(st.x), Y(st.y));
+      ctx.lineTo(X(st.x + Math.cos(st.th) * P.rRobot * 1.35), Y(st.y + Math.sin(st.th) * P.rRobot * 1.35));
+      ctx.stroke();
+    }
+    function resize() {
+      var w = canvas.clientWidth || 700;
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(w * 0.6 * dpr);
+      draw();
+    }
+    function restart() {
+      seed += 1;
+      sim = C.createSim(params());
+      doneAt = 0;
+      readout();
+      draw();
+    }
+    function frame(ts) {
+      raf = 0;
+      if (!playing) { return; }
+      if (!last) { last = ts; }
+      if (ts - last >= 100) {
+        last = ts;
+        if (finished()) {
+          if (!doneAt) { doneAt = ts; } else if (ts - doneAt > 1500) { restart(); }
+        } else {
+          sim.step();
+          readout();
+          draw();
+        }
+      }
+      raf = window.requestAnimationFrame(frame);
+    }
+    function setPlaying(on) {
+      playing = on;
+      btnPlay.textContent = on ? '一時停止' : '再生';
+      btnPlay.setAttribute('aria-pressed', String(on));
+      if (on && !raf) { last = 0; raf = window.requestAnimationFrame(frame); }
+    }
+    btnPlay.addEventListener('click', function () {
+      userPaused = playing;
+      setPlaying(!playing);
+    });
+    btnStep.addEventListener('click', function () {
+      userPaused = true;
+      setPlaying(false);
+      if (finished()) { restart(); return; }
+      sim.step();
+      readout();
+      draw();
+    });
+    btnReset.addEventListener('click', restart);
+    selScene.addEventListener('change', restart);
+    function onParam() {
+      syncOutputs();
+      var p = params();
+      sim.opts.lambda = p.lambda;
+      sim.opts.sigmaW = p.sigmaW;
+      sim.opts.K = p.K;
+      if (!playing && !finished()) { sim.optimize(); readout(); draw(); }
+    }
+    [inL, inS, inK].forEach(function (el) { el.addEventListener('input', onParam); });
+
+    if ('ResizeObserver' in window) { new ResizeObserver(resize).observe(canvas); } else { window.addEventListener('resize', resize); }
+    if (window.matchMedia) {
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      if (mq.addEventListener) { mq.addEventListener('change', draw); }
+    }
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            if (!userPaused && !reduce) { setPlaying(true); }
+          } else if (playing) {
+            setPlaying(false);
+          }
+        });
+      }, { threshold: 0.3 }).observe(canvas);
+    }
+    syncOutputs();
+    resize();
+    readout();
+  })();
+})();
+</script>
+</body>
+</html>
