@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MPPI の理論 | MPC × MPPI 学習ノート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/katex/katex.css">
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/auto-render.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 Q 12 12 20 4" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 Q 12 12 20 20" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 H 20" fill="none" stroke="var(--mpc)" stroke-width="2.4" stroke-linecap="round"/><circle cx="5" cy="12" r="3" fill="var(--ink)"/></svg><span>MPC × MPPI 学習ノート</span></a>
+  <button class="menu-btn" type="button" aria-expanded="false" aria-label="目次を開く">目次</button>
+</header>
+<div class="layout">
+<nav class="rail" aria-label="章の一覧"><h2>目次</h2><ul class="toc"><li><a href="index.html"><span class="num">◆</span><span>はじめに</span><span></span></a></li><li><a href="00_roadmap.html"><span class="num">00</span><span>学習ロードマップ</span><span class="done" data-done-slug="00_roadmap" title="読了"></span></a></li><li><a href="01_optimal_control.html"><span class="num">01</span><span>最適制御問題と receding horizon</span><span class="done" data-done-slug="01_optimal_control" title="読了"></span></a></li><li><a href="02_least_squares_gauss_newton.html"><span class="num">02</span><span>最小二乗とガウス・ニュートン法</span><span class="done" data-done-slug="02_least_squares_gauss_newton" title="読了"></span></a></li><li><a href="03_linear_mpc.html"><span class="num">03</span><span>線形 MPC</span><span class="done" data-done-slug="03_linear_mpc" title="読了"></span></a></li><li><a href="04_nonlinear_mpc.html"><span class="num">04</span><span>非線形 MPC</span><span class="done" data-done-slug="04_nonlinear_mpc" title="読了"></span></a></li><li><a href="05_mppi_basics.html"><span class="num">05</span><span>MPPI の考え方</span><span class="done" data-done-slug="05_mppi_basics" title="読了"></span></a></li><li><a href="06_mppi_theory.html" aria-current="page"><span class="num">06</span><span>MPPI の理論</span><span class="done" data-done-slug="06_mppi_theory" title="読了"></span></a></li><li><a href="07_comparison.html"><span class="num">07</span><span>MPC と MPPI の比較</span><span class="done" data-done-slug="07_comparison" title="読了"></span></a></li><li><a href="08_nav2_mppi.html"><span class="num">08</span><span>Nav2 の MPPI</span><span class="done" data-done-slug="08_nav2_mppi" title="読了"></span></a></li><li><a href="09_glossary.html"><span class="num">09</span><span>用語集</span><span class="done" data-done-slug="09_glossary" title="読了"></span></a></li></ul><h2>リンク</h2><p class="rail-note"><a href="https://github.com/mamoru1126/study_mpc_mppi" target="_blank" rel="noopener">このリポジトリ</a><br><a href="https://docs.nav2.org/configuration/packages/configuring-mppic.html" target="_blank" rel="noopener">Nav2 の MPPI の設定ガイド</a><br><a href="https://homes.cs.washington.edu/~bboots/files/InformationTheoreticMPC.pdf" target="_blank" rel="noopener">MPPI の論文 (Williams et al. 2017)</a></p><p class="rail-note">各章の最後で「この章を読んだ」にチェックすると、ここに印が付きます (このブラウザにだけ保存)。</p></nav>
+<main>
+<article class="article">
+<div class="chapter-meta"><span class="chip time">第 06 章</span><span class="chip mppi">MPPI</span><span class="chip math">数学</span><span class="chip time">目安 2 時間</span></div>
+<h1 id="06-mppi-の理論-なぜ重みつき平均なのか">06. MPPI の理論 (なぜ重みつき平均なのか)</h1>
+<h2 id="この章のゴール">この章のゴール</h2>
+<ul>
+<li>理想の分布 <span class="arithmatex">\(q^* \propto p\, e^{-S/\lambda}\)</span> が「コストを下げつつ、今のばらつきから離れすぎない」問題の答えであることが分かる</li>
+<li>重点サンプリングで <span class="arithmatex">\(q^*\)</span> の平均を推定したものが、MPPI の更新式であることが分かる</li>
+<li>サンプルを増やすと、MPPI の更新は「ぼかしたコスト <span class="arithmatex">\(F_\lambda\)</span> の坂を下る」勾配法になることが分かる</li>
+<li>2 次のコストなら、LM 法と同じ形 <span class="arithmatex">\(\Delta u = -(A + \lambda\Sigma^{-1})^{-1} \nabla S\)</span> になることを確かめる</li>
+</ul>
+<blockquote>
+<p><strong>つながり</strong>
+<a href="05_mppi_basics.html">05 章</a> の式の由来です。最後に <a href="02_least_squares_gauss_newton.html">02 章</a> の LM 法と結びつけ、<a href="07_comparison.html">07 章</a> の比較の土台にします。式変形が多い章なので、まず各節の太字の結論と図を追い、導出は 2 回目に読むのがおすすめです。</p>
+</blockquote>
+<hr />
+<h2 id="0-この章で使う記号">0. この章で使う記号</h2>
+<table>
+<thead>
+<tr>
+<th>記号</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(V\)</span></td>
+<td>サンプルした入力の列 (確率的に決まる)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(p(V)\)</span></td>
+<td>今のばらつき。平均が今の案 <span class="arithmatex">\(U\)</span>、共分散 <span class="arithmatex">\(\Sigma\)</span> の正規分布 <span class="arithmatex">\(\mathcal N(U, \Sigma)\)</span></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(q(V)\)</span></td>
+<td>入力の列のばらつき (これを選ぶ)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\mathbb E_q[\cdot]\)</span></td>
+<td><span class="arithmatex">\(V \sim q\)</span> のときの平均 (期待値)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\mathrm{KL}(q \,\Vert\, p)\)</span></td>
+<td>2 つの分布の違いの大きさ (KL ダイバージェンス)。0 以上で、<span class="arithmatex">\(q = p\)</span> のときだけ 0</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(F_\lambda\)</span></td>
+<td>コストをぼかしたもの (4 節)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(A\)</span>, <span class="arithmatex">\(c\)</span></td>
+<td>2 次のコスト <span class="arithmatex">\(S(u) = \frac12 (u - c)^\top A (u - c)\)</span> の曲がり具合と最小点 (5 節)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="1-1-本の入力の列から入力の列のばらつきへ">1. 1 本の入力の列から、入力の列の「ばらつき」へ</h2>
+<p>MPC は 1 本の入力の列 <span class="arithmatex">\(U\)</span> を選びました。MPPI は、<strong>入力の列のばらつき (確率分布) <span class="arithmatex">\(q\)</span></strong> を選ぶ問題に置きかえます。目標は次の 2 つのつり合いです。</p>
+<ul>
+<li>平均のコスト <span class="arithmatex">\(\mathbb E_q[S(V)]\)</span> を下げたい</li>
+<li>今のばらつき <span class="arithmatex">\(p\)</span> から離れすぎたくない (離れすぎると、手元のサンプルで評価できない)</li>
+</ul>
+<div class="arithmatex">\[
+\min_{q}\ \ \mathbb E_q[S(V)] + \lambda\, \mathrm{KL}(q \,\Vert\, p)
+\qquad (1)
+\]</div>
+<p><span class="arithmatex">\(\lambda\)</span> はつり合いの重みです。<strong>この問題の答えは、次の分布になります。</strong></p>
+<div class="arithmatex">\[
+q^*(V) = \frac{1}{\eta}\, p(V)\, e^{-S(V)/\lambda},
+\qquad
+\eta = \mathbb E_p\bigl[e^{-S(V)/\lambda}\bigr]
+\qquad (2)
+\]</div>
+<p>今のばらつき <span class="arithmatex">\(p\)</span> を、コストが低い入力の列ほど <span class="arithmatex">\(e^{-S/\lambda}\)</span> 倍だけ出やすくなるように作り直したもの、という意味です。<span class="arithmatex">\(\eta\)</span> は合計を 1 にするための定数です。</p>
+<details>
+<summary>導出 (2 行で済みます)</summary>
+<p>どんな <span class="arithmatex">\(q\)</span> についても、KL の定義 <span class="arithmatex">\(\mathrm{KL}(q \Vert p) = \mathbb E_q[\log q - \log p]\)</span> を使うと</p>
+<div class="arithmatex">\[
+\begin{aligned}
+\mathbb E_q[S] + \lambda\, \mathrm{KL}(q \Vert p)
+&= \lambda\, \mathbb E_q\!\left[\log q - \log\bigl(p\, e^{-S/\lambda}\bigr)\right] \\
+&= \lambda\, \mathbb E_q\!\left[\log q - \log(\eta\, q^*)\right] \\
+&= \lambda\, \mathrm{KL}(q \Vert q^*) - \lambda \log \eta
+\end{aligned}
+\]</div>
+<p>KL は 0 以上で、<span class="arithmatex">\(q = q^*\)</span> のときだけ 0 なので、最小値 <span class="arithmatex">\(-\lambda \log \eta\)</span> を取るのは <span class="arithmatex">\(q = q^*\)</span> のときです。</p>
+</details>
+<p><span class="arithmatex">\(\lambda\)</span> が大きいほど <span class="arithmatex">\(p\)</span> から離れにくく (<span class="arithmatex">\(q^* \approx p\)</span>)、小さいほどコストの低い所に集中します。05 章で見た <span class="arithmatex">\(\lambda\)</span> のふるまいと同じです。</p>
+<h2 id="2-新しい案--理想の分布の平均">2. 新しい案 = 理想の分布の平均</h2>
+<p>実際に扱えるのは「平均 <span class="arithmatex">\(U'\)</span>、共分散 <span class="arithmatex">\(\Sigma\)</span> の正規分布」だけです (サンプルを引くのも、実行するのも、平均の入力の列)。そこで、<span class="arithmatex">\(q^*\)</span> にいちばん近い正規分布を選びます。<strong>それは平均を <span class="arithmatex">\(q^*\)</span> の平均に合わせたもの</strong> です。</p>
+<div class="arithmatex">\[
+U' = \mathbb E_{q^*}[V]
+\qquad (3)
+\]</div>
+<details>
+<summary>導出</summary>
+<p><span class="arithmatex">\(q^*\)</span> と <span class="arithmatex">\(\mathcal N(U', \Sigma)\)</span> の違い <span class="arithmatex">\(\mathrm{KL}(q^* \Vert \mathcal N(U', \Sigma))\)</span> のうち、<span class="arithmatex">\(U'\)</span> に関係する部分は <span class="arithmatex">\(\frac12 \mathbb E_{q^*}[(V - U')^\top \Sigma^{-1} (V - U')]\)</span> だけです。これを <span class="arithmatex">\(U'\)</span> で微分して 0 とおくと <span class="arithmatex">\(\Sigma^{-1}\, \mathbb E_{q^*}[V - U'] = 0\)</span>、つまり <span class="arithmatex">\(U' = \mathbb E_{q^*}[V]\)</span> です。</p>
+</details>
+<p>2 次のコスト <span class="arithmatex">\(S(u) = 2(u - 2)^2 + 8\)</span>、今の案 <span class="arithmatex">\(u = 0\)</span>、<span class="arithmatex">\(\sigma = 1\)</span>、<span class="arithmatex">\(\lambda = 1\)</span> の例で描くと次のようになります (演習 6)。</p>
+<p><img alt="演習 6: 理想の分布 q* と、その平均" src="figures/ex06_distributions.png" /></p>
+<p>灰色の <span class="arithmatex">\(p\)</span> と点線の <span class="arithmatex">\(e^{-S/\lambda}\)</span> の積が、オレンジの <span class="arithmatex">\(q^*\)</span> です。<span class="arithmatex">\(q^*\)</span> の平均 1.6 が新しい案になります。コストの最小点 <span class="arithmatex">\(u = 2\)</span> までは一気に行かず、今の案から 1.6 だけ進みます。この「一気に行かない」性質は 5 節で LM 法の慎重さとして説明します。</p>
+<h2 id="3-重点サンプリング-q-から引けないのでp-から引いて重みで直す">3. 重点サンプリング: <span class="arithmatex">\(q^*\)</span> から引けないので、<span class="arithmatex">\(p\)</span> から引いて重みで直す</h2>
+<p><span class="arithmatex">\(q^*\)</span> の平均を求めたいのですが、<span class="arithmatex">\(q^*\)</span> から直接サンプルを引くことはできません (<span class="arithmatex">\(\eta\)</span> も分からない)。そこで、引きやすい <span class="arithmatex">\(p\)</span> からサンプルを引き、<span class="arithmatex">\(q^*\)</span> と <span class="arithmatex">\(p\)</span> の比で重みをつけて平均します。これを <strong>重点サンプリング</strong> と呼びます。</p>
+<div class="arithmatex">\[
+\begin{aligned}
+\mathbb E_{q^*}[V]
+&= \frac{\mathbb E_p\bigl[V\, e^{-S(V)/\lambda}\bigr]}{\mathbb E_p\bigl[e^{-S(V)/\lambda}\bigr]}
+\approx \sum_{k=1}^{K} w_k V^k \\
+w_k &= \frac{e^{-S_k/\lambda}}{\sum_{j} e^{-S_j/\lambda}}, \qquad V^k \sim p
+\end{aligned}
+\]</div>
+<p><span class="arithmatex">\(V^k = U + E^k\)</span> (<span class="arithmatex">\(E^k\)</span> はゆらぎの列) で、重みの合計は 1 なので、</p>
+<div class="arithmatex">\[
+U' \approx \sum_k w_k (U + E^k) = U + \sum_k w_k E^k
+\]</div>
+<p><strong>これが 05 章の更新式 (1) そのものです。</strong> 重みが <span class="arithmatex">\(e^{-S_k/\lambda}\)</span> なのは、<span class="arithmatex">\(q^*\)</span> が <span class="arithmatex">\(p\)</span> に <span class="arithmatex">\(e^{-S/\lambda}\)</span> をかけた形だからです。上の図の下に並んだ点は、<span class="arithmatex">\(p\)</span> から引いた 40 本のサンプルで、点の大きさが重みです。重みつき平均は 1.49 で、本当の平均 1.6 に近い値になっています。</p>
+<h3 id="31-補正項-lambda-utop-sigma-1-varepsilon-の由来">3.1 補正項 <span class="arithmatex">\(\lambda\, u^\top \Sigma^{-1} \varepsilon\)</span> の由来</h3>
+<p>元の論文では、1 節の <span class="arithmatex">\(p\)</span> を「今のばらつき <span class="arithmatex">\(\mathcal N(U, \Sigma)\)</span>」ではなく、「入力を何もしないときのばらつき <span class="arithmatex">\(\mathcal N(0, \Sigma)\)</span>」にしています。すると、サンプルを引く分布 (<span class="arithmatex">\(U\)</span> のまわり) と <span class="arithmatex">\(p\)</span> (0 のまわり) がずれるので、重みにその比 <span class="arithmatex">\(\mathcal N(V; 0, \Sigma) / \mathcal N(V; U, \Sigma)\)</span> がかかり、コストに次の項が足されます。</p>
+<div class="arithmatex">\[
+\tilde S_k = S_k + \lambda \sum_{t=0}^{N-1} u_t^\top \Sigma^{-1} \varepsilon_t^k
+\]</div>
+<details>
+<summary>導出</summary>
+<p>1 ステップぶんで、<span class="arithmatex">\(V = U + \varepsilon\)</span> とすると</p>
+<div class="arithmatex">\[
+\begin{aligned}
+\frac{\mathcal N(V; 0, \Sigma)}{\mathcal N(V; U, \Sigma)}
+&= \exp\!\left(-\tfrac12 V^\top \Sigma^{-1} V + \tfrac12 \varepsilon^\top \Sigma^{-1} \varepsilon\right) \\
+&= \exp\!\left(-U^\top \Sigma^{-1} \varepsilon - \tfrac12 U^\top \Sigma^{-1} U\right)
+\end{aligned}
+\]</div>
+<p>最後の項はサンプルによらない定数なので、正規化で消えます。残った <span class="arithmatex">\(e^{-U^\top \Sigma^{-1} \varepsilon}\)</span> を <span class="arithmatex">\(e^{-S/\lambda}\)</span> とまとめると、<span class="arithmatex">\(e^{-(S + \lambda U^\top \Sigma^{-1} \varepsilon)/\lambda}\)</span> になります。</p>
+</details>
+<p>この項は、入力を大きくする向きのゆらぎ (<span class="arithmatex">\(u_t\)</span> と同じ向きの <span class="arithmatex">\(\varepsilon_t\)</span>) を少し罰し、入力を小さく保つ (省エネ) 方向に働きます。Nav2 ではこの係数を <span class="arithmatex">\(\lambda\)</span> ではなく <code>gamma</code> という別のパラメータにしていて、ドキュメントでは「なめらかさ (大きい値) と省エネ (小さい値) のつり合い」と説明されています (<a href="08_nav2_mppi.html">08 章</a>)。</p>
+<h2 id="4-サンプルを増やすと-ぼかしたコストの坂を下る">4. サンプルを増やすと: ぼかしたコストの坂を下る</h2>
+<p>サンプルを無限に増やしたとき、MPPI の 1 回の更新量 <span class="arithmatex">\(\Delta u\)</span> は何を計算しているのでしょうか。<strong>答えは、次の「ぼかしたコスト」の坂を下る勾配法です。</strong></p>
+<div class="arithmatex">\[
+\begin{gathered}
+\Delta u = -\frac{\Sigma}{\lambda}\, \nabla F_\lambda(\bar u) \qquad (4) \\
+F_\lambda(\bar u) = -\lambda \log \mathbb E_{\varepsilon \sim \mathcal N(0, \Sigma)}\!\left[ e^{-S(\bar u + \varepsilon)/\lambda} \right]
+\end{gathered}
+\]</div>
+<details>
+<summary>導出 (正規分布の微分の性質を使います)</summary>
+<p>サンプル無限の更新量は <span class="arithmatex">\(\Delta u = \mathbb E[\varepsilon\, e^{-S(\bar u + \varepsilon)/\lambda}] \,/\, \mathbb E[e^{-S(\bar u + \varepsilon)/\lambda}]\)</span> です。一方、<span class="arithmatex">\(G(\bar u) = \mathbb E[e^{-S(\bar u + \varepsilon)/\lambda}] = \int \mathcal N(v; \bar u, \Sigma)\, e^{-S(v)/\lambda}\, dv\)</span> を <span class="arithmatex">\(\bar u\)</span> で微分すると、正規分布の密度の微分 <span class="arithmatex">\(\nabla_{\bar u} \mathcal N(v; \bar u, \Sigma) = \mathcal N(v; \bar u, \Sigma)\, \Sigma^{-1} (v - \bar u)\)</span> より</p>
+<div class="arithmatex">\[
+\nabla G = \Sigma^{-1}\, \mathbb E\bigl[\varepsilon\, e^{-S(\bar u + \varepsilon)/\lambda}\bigr]
+\]</div>
+<p>です。<span class="arithmatex">\(F_\lambda = -\lambda \log G\)</span> なので、<span class="arithmatex">\(\nabla F_\lambda = -\lambda \nabla G / G = -\lambda\, \Sigma^{-1} \Delta u\)</span> となり、式 (4) が得られます。コストの微分 <span class="arithmatex">\(\nabla S\)</span> を一度も使っていないことに注意してください。</p>
+</details>
+<h3 id="41-f_lambda-は何か">4.1 <span class="arithmatex">\(F_\lambda\)</span> は何か</h3>
+<p><span class="arithmatex">\(F_\lambda(\bar u)\)</span> は、今の案 <span class="arithmatex">\(\bar u\)</span> のまわり (ゆらぎの幅 <span class="arithmatex">\(\Sigma\)</span> の範囲) のコストを、<strong>低いほうを重視して平均したもの</strong> です。1 節の最小値 <span class="arithmatex">\(-\lambda \log \eta\)</span> と同じもので、統計物理の言葉では自由エネルギーと呼ばれます。</p>
+<ul>
+<li><span class="arithmatex">\(\lambda \to \infty\)</span>: <span class="arithmatex">\(F_\lambda \to \mathbb E[S(\bar u + \varepsilon)]\)</span>。コストを正規分布でぼかしただけのもの</li>
+<li><span class="arithmatex">\(\lambda \to 0\)</span>: <span class="arithmatex">\(F_\lambda\)</span> はまわりのコストのいちばん低い値に近づく</li>
+</ul>
+<p>つまり MPPI は、<strong>元のコスト <span class="arithmatex">\(S\)</span> ではなく、それをぼかした <span class="arithmatex">\(F_\lambda\)</span> の坂を、歩幅 <span class="arithmatex">\(\Sigma / \lambda\)</span> で下っています</strong>。</p>
+<h3 id="42-段差のコストでも坂ができる">4.2 段差のコストでも坂ができる</h3>
+<p>「接触する側 (<span class="arithmatex">\(u &lt; 0\)</span>) は 4、しない側は 0」という段差のコストで確かめます。<span class="arithmatex">\(\sigma = 0.5\)</span>、<span class="arithmatex">\(\lambda = 1\)</span>、今の案 <span class="arithmatex">\(\bar u = -0.6\)</span> (接触する側) です (演習 6)。</p>
+<p><img alt="演習 6: ぼかしたコストと、サンプル数による誤差" src="figures/ex06_mppi_theory.png" /></p>
+<ul>
+<li>元のコスト <span class="arithmatex">\(S\)</span> は <span class="arithmatex">\(\bar u = -0.6\)</span> で平らなので、傾きは 0。勾配を使う方法は動けない</li>
+<li>ぼかしたコスト <span class="arithmatex">\(F_\lambda\)</span> には右へ下る坂があり、式 (4) の更新量は <span class="arithmatex">\(\Delta u = +0.726\)</span>。1 回の更新で <span class="arithmatex">\(\bar u = +0.126\)</span> (接触しない側) へ移る</li>
+<li>実際の MPPI (サンプル <span class="arithmatex">\(K\)</span> 本) の更新量は次のとおり</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th><span class="arithmatex">\(K\)</span></th>
+<th>更新量の平均</th>
+<th>ばらつき (標準偏差)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10</td>
+<td>0.480</td>
+<td>0.410</td>
+</tr>
+<tr>
+<td>100</td>
+<td>0.719</td>
+<td>0.069</td>
+</tr>
+<tr>
+<td>1,000</td>
+<td>0.726</td>
+<td>0.019</td>
+</tr>
+<tr>
+<td>10,000</td>
+<td>0.726</td>
+<td>0.006</td>
+</tr>
+</tbody>
+</table>
+<p>サンプルを 100 倍にすると、ばらつきは約 1/10 になります (<span class="arithmatex">\(1/\sqrt{K}\)</span> に比例)。<span class="arithmatex">\(K = 10\)</span> では平均も小さめにずれています (重みを合計 1 に正規化することによる偏り)。</p>
+<p>ゆらぎが届かないほど遠い段差は見えません。例えば <span class="arithmatex">\(\bar u = -3\)</span> (<span class="arithmatex">\(6\sigma\)</span> 離れている) なら、ほとんどのサンプルが段差を越えないので、<span class="arithmatex">\(F_\lambda\)</span> はほぼ平らで <span class="arithmatex">\(\Delta u \approx 0\)</span> です。<strong>MPPI が見えるのは、ゆらぎ <span class="arithmatex">\(\Sigma\)</span> が届く範囲だけ</strong> です。</p>
+<p>下のデモで、<span class="arithmatex">\(\bar u\)</span>、<span class="arithmatex">\(\sigma\)</span>、<span class="arithmatex">\(\lambda\)</span> を動かして確かめてください。</p>
+<div data-demo="smooth"></div>
+
+<h2 id="5-2-次のコストなら-lm-法と同じ形">5. 2 次のコストなら LM 法と同じ形</h2>
+<p>コストが 2 次関数 <span class="arithmatex">\(S(u) = \frac12 (u - c)^\top A (u - c) + \text{定数}\)</span> (曲がり具合 <span class="arithmatex">\(A\)</span>、最小点 <span class="arithmatex">\(c\)</span>) のときは、更新量を式で書けます。正規分布 <span class="arithmatex">\(\mathcal N(\bar u, \Sigma)\)</span> に <span class="arithmatex">\(e^{-S/\lambda}\)</span> をかけたものは、また正規分布になるからです。</p>
+<div class="arithmatex">\[
+\Delta u = -\left(A + \lambda \Sigma^{-1}\right)^{-1} \nabla S(\bar u)
+\qquad (5)
+\]</div>
+<details>
+<summary>導出</summary>
+<p><span class="arithmatex">\(q^*(u) \propto \exp\bigl(-\frac12 (u - \bar u)^\top \Sigma^{-1} (u - \bar u) - \frac{1}{2\lambda} (u - c)^\top A (u - c)\bigr)\)</span> は、精度行列 (共分散の逆) が <span class="arithmatex">\(\Sigma^{-1} + A/\lambda\)</span> の正規分布で、平均は</p>
+<div class="arithmatex">\[
+m = \left(\Sigma^{-1} + A/\lambda\right)^{-1} \left(\Sigma^{-1} \bar u + (A/\lambda)\, c\right)
+\]</div>
+<p>です。<span class="arithmatex">\(\Delta u = m - \bar u = (\Sigma^{-1} + A/\lambda)^{-1} (A/\lambda)(c - \bar u) = (A + \lambda\Sigma^{-1})^{-1} A (c - \bar u)\)</span> で、<span class="arithmatex">\(\nabla S(\bar u) = A(\bar u - c)\)</span> なので式 (5) になります。</p>
+</details>
+<p>02 章の LM 法と並べると、役割が 1 対 1 に対応します。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>LM 法 (02 章)</th>
+<th>MPPI (サンプル無限、2 次のコスト)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 回の更新</td>
+<td><span class="arithmatex">\(\Delta z = -(J^\top J + \mu D)^{-1} J^\top r\)</span></td>
+<td><span class="arithmatex">\(\Delta u = -(A + \lambda\Sigma^{-1})^{-1} \nabla S\)</span></td>
+</tr>
+<tr>
+<td>曲がり具合</td>
+<td><span class="arithmatex">\(J^\top J\)</span></td>
+<td><span class="arithmatex">\(A\)</span></td>
+</tr>
+<tr>
+<td>勾配</td>
+<td><span class="arithmatex">\(J^\top r\)</span></td>
+<td><span class="arithmatex">\(\nabla S\)</span></td>
+</tr>
+<tr>
+<td>慎重さ (減衰)</td>
+<td><span class="arithmatex">\(\mu D\)</span></td>
+<td><span class="arithmatex">\(\lambda \Sigma^{-1}\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>つまり <strong>MPPI は、減衰が <span class="arithmatex">\(\lambda \Sigma^{-1}\)</span> の LM 法</strong> になっています。<span class="arithmatex">\(\lambda\)</span> が小さいか、ゆらぎ <span class="arithmatex">\(\Sigma\)</span> が大きいほど大胆 (ニュートン法に近い) で、<span class="arithmatex">\(\lambda\)</span> が大きいほど歩幅 <span class="arithmatex">\(\Sigma/\lambda\)</span> の慎重な勾配法になります。演習 6 の数値 (<span class="arithmatex">\(S = 2(u - 2)^2 + 8\)</span>、つまり <span class="arithmatex">\(A = 4\)</span>、<span class="arithmatex">\(c = 2\)</span>、今の案 <span class="arithmatex">\(\bar u = 0\)</span>) で確かめます。</p>
+<table>
+<thead>
+<tr>
+<th><span class="arithmatex">\(\sigma\)</span></th>
+<th><span class="arithmatex">\(\lambda\)</span></th>
+<th>式 (5)</th>
+<th>MPPI (<span class="arithmatex">\(K = 10{,}000\)</span>) の平均</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1</td>
+<td>1.600</td>
+<td>1.602</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1</td>
+<td>1.882</td>
+<td>1.882</td>
+</tr>
+<tr>
+<td>1</td>
+<td>4</td>
+<td>1.000</td>
+<td>1.001</td>
+</tr>
+</tbody>
+</table>
+<p>ニュートン法なら 1 回で最小点まで 2 だけ進みます。MPPI は減衰 <span class="arithmatex">\(\lambda/\sigma^2\)</span> のぶんだけ手前で止まります。違いは、LM 法が <span class="arithmatex">\(J^\top J\)</span> と <span class="arithmatex">\(J^\top r\)</span> を微分で正確に計算するのに対し、MPPI はそれに当たるものをサンプルで推定していることです。</p>
+<h2 id="6-まとめ-2-つの方法はどこが同じでどこが違うか">6. まとめ: 2 つの方法はどこが同じで、どこが違うか</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>MPC (ガウス・ニュートン法・LM 法)</th>
+<th>MPPI</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>何を下るか</td>
+<td>元のコスト <span class="arithmatex">\(S\)</span></td>
+<td>ぼかしたコスト <span class="arithmatex">\(F_\lambda\)</span></td>
+</tr>
+<tr>
+<td>傾きの求め方</td>
+<td>微分で正確に</td>
+<td>サンプルで推定 (誤差 <span class="arithmatex">\(\propto 1/\sqrt{K}\)</span>)</td>
+</tr>
+<tr>
+<td>慎重さ</td>
+<td><span class="arithmatex">\(\mu D\)</span> (LM 法)</td>
+<td><span class="arithmatex">\(\lambda \Sigma^{-1}\)</span></td>
+</tr>
+<tr>
+<td>段差のコスト</td>
+<td>傾きが 0 で見えない</td>
+<td>ぼかすと坂になるので見える</td>
+</tr>
+<tr>
+<td>見える範囲</td>
+<td>今の案のごく近く (微分)</td>
+<td>ゆらぎ <span class="arithmatex">\(\Sigma\)</span> が届く範囲</td>
+</tr>
+</tbody>
+</table>
+<p>どちらも「今の案のまわりを調べて、良くなる向きに少し直す」をくり返す方法で、違うのは <strong>まわりの調べ方 (微分か、サンプルか)</strong> です。この見方で 07 章の比較を読むと、得意・苦手の理由がよく分かります。</p>
+<h2 id="演習-6">演習 6</h2>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>exercises/ex06_mppi_theory.py
+</code></pre></div>
+<p>段差のコストで式 (4) とサンプル数 <span class="arithmatex">\(K\)</span> の MPPI を比べ、2 次のコストで式 (5) を確かめ、図を 2 枚作ります。</p>
+<p>試してみること:</p>
+<ul>
+<li><code>ubar = -0.6</code> を <code>-1.5</code> や <code>-3.0</code> にすると、理論の更新量はどうなるか</li>
+<li>段差の高さ (<code>step_cost</code> の 4.0) を 40 にすると、<span class="arithmatex">\(F_\lambda\)</span> の形と更新量はどう変わるか</li>
+</ul>
+<h2 id="理解度チェック">理解度チェック</h2>
+<ol>
+<li>式 (1) で KL の項を足すのはなぜか。<span class="arithmatex">\(\lambda\)</span> を大きくすると <span class="arithmatex">\(q^*\)</span> はどうなるか?</li>
+<li><span class="arithmatex">\(q^*\)</span> から直接サンプルを引かずに、その平均を求めるにはどうするか?</li>
+<li>補正項 <span class="arithmatex">\(\lambda\, u^\top \Sigma^{-1} \varepsilon\)</span> は、何と何の比から出てくるか?</li>
+<li>段差のコストで、勾配法は動けないのに MPPI が動けるのはなぜか?</li>
+<li>2 次のコストで <span class="arithmatex">\(\lambda \to 0\)</span> とすると、MPPI の更新量はどうなるか?</li>
+<li><span class="arithmatex">\(K = 10\)</span> と <span class="arithmatex">\(K = 1000\)</span> で、更新量の平均とばらつきが違うのはなぜか?</li>
+</ol>
+<details>
+<summary>答えの例</summary>
+<ol>
+<li>今のばらつき <span class="arithmatex">\(p\)</span> から離れすぎない (手元のサンプルで評価できる範囲にとどまる) ようにするため。<span class="arithmatex">\(\lambda\)</span> を大きくすると <span class="arithmatex">\(q^*\)</span> は <span class="arithmatex">\(p\)</span> に近づき、更新が小さくなる。</li>
+<li>引きやすい <span class="arithmatex">\(p\)</span> からサンプルを引き、<span class="arithmatex">\(e^{-S_k/\lambda}\)</span> に比例する重みをつけて平均する (重点サンプリング)。</li>
+<li>論文で <span class="arithmatex">\(p\)</span> にした「入力なしのばらつき <span class="arithmatex">\(\mathcal N(0, \Sigma)\)</span>」と、実際にサンプルを引く「今の案のまわりのばらつき <span class="arithmatex">\(\mathcal N(U, \Sigma)\)</span>」の比。</li>
+<li>MPPI は元のコストではなく、ゆらぎの幅でぼかしたコスト <span class="arithmatex">\(F_\lambda\)</span> の坂を下るから。段差もぼかすとなめらかな坂になる。</li>
+<li><span class="arithmatex">\(\Delta u = -A^{-1} \nabla S(\bar u) = c - \bar u\)</span> となり、ニュートン法と同じく 1 回で最小点へ行く。</li>
+<li>重みつき平均はサンプルで推定しているので、ばらつきは <span class="arithmatex">\(1/\sqrt{K}\)</span> に比例して小さくなる。また、重みを合計 1 に正規化するため、<span class="arithmatex">\(K\)</span> が小さいと平均も本当の値からずれる (偏り)。</li>
+</ol>
+</details>
+<h2 id="もっと知りたい人へ">もっと知りたい人へ</h2>
+<ul>
+<li>G. Williams, N. Wagener, B. Goldfain, P. Drews, J. M. Rehg, B. Boots, E. A. Theodorou, "Information Theoretic MPC for Model-Based Reinforcement Learning," ICRA 2017, pp. 1714–1721. 1〜3 節の導出の元。</li>
+<li>G. Williams, P. Drews, B. Goldfain, J. M. Rehg, E. A. Theodorou, "Information-Theoretic Model Predictive Control: Theory and Applications to Autonomous Driving," <em>IEEE Transactions on Robotics</em>, 34(6), pp. 1603–1622, 2018.</li>
+<li>E. A. Theodorou, E. Todorov, "Relative entropy and free energy dualities: Connections to Path Integral and KL control," IEEE CDC 2012. 1 節の KL と自由エネルギーの関係。</li>
+</ul>
+<label class="read-toggle"><input type="checkbox" id="read-toggle" data-slug="06_mppi_theory"> この章を読んだ</label>
+<nav class="pager" aria-label="前後の章"><a class="prev" href="05_mppi_basics.html"><small>前へ</small>05 MPPI の考え方</a><a class="next" href="07_comparison.html"><small>次へ</small>07 MPC と MPPI の比較</a></nav>
+</article>
+</main>
+</div>
+<script src="assets/app.js"></script>
+<script src="assets/ctrl.js"></script>
+<script src="assets/demos.js"></script>
+</body>
+</html>

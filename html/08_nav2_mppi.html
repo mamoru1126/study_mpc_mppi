@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nav2 の MPPI | MPC × MPPI 学習ノート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/katex/katex.css">
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/auto-render.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 Q 12 12 20 4" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 Q 12 12 20 20" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 H 20" fill="none" stroke="var(--mpc)" stroke-width="2.4" stroke-linecap="round"/><circle cx="5" cy="12" r="3" fill="var(--ink)"/></svg><span>MPC × MPPI 学習ノート</span></a>
+  <button class="menu-btn" type="button" aria-expanded="false" aria-label="目次を開く">目次</button>
+</header>
+<div class="layout">
+<nav class="rail" aria-label="章の一覧"><h2>目次</h2><ul class="toc"><li><a href="index.html"><span class="num">◆</span><span>はじめに</span><span></span></a></li><li><a href="00_roadmap.html"><span class="num">00</span><span>学習ロードマップ</span><span class="done" data-done-slug="00_roadmap" title="読了"></span></a></li><li><a href="01_optimal_control.html"><span class="num">01</span><span>最適制御問題と receding horizon</span><span class="done" data-done-slug="01_optimal_control" title="読了"></span></a></li><li><a href="02_least_squares_gauss_newton.html"><span class="num">02</span><span>最小二乗とガウス・ニュートン法</span><span class="done" data-done-slug="02_least_squares_gauss_newton" title="読了"></span></a></li><li><a href="03_linear_mpc.html"><span class="num">03</span><span>線形 MPC</span><span class="done" data-done-slug="03_linear_mpc" title="読了"></span></a></li><li><a href="04_nonlinear_mpc.html"><span class="num">04</span><span>非線形 MPC</span><span class="done" data-done-slug="04_nonlinear_mpc" title="読了"></span></a></li><li><a href="05_mppi_basics.html"><span class="num">05</span><span>MPPI の考え方</span><span class="done" data-done-slug="05_mppi_basics" title="読了"></span></a></li><li><a href="06_mppi_theory.html"><span class="num">06</span><span>MPPI の理論</span><span class="done" data-done-slug="06_mppi_theory" title="読了"></span></a></li><li><a href="07_comparison.html"><span class="num">07</span><span>MPC と MPPI の比較</span><span class="done" data-done-slug="07_comparison" title="読了"></span></a></li><li><a href="08_nav2_mppi.html" aria-current="page"><span class="num">08</span><span>Nav2 の MPPI</span><span class="done" data-done-slug="08_nav2_mppi" title="読了"></span></a></li><li><a href="09_glossary.html"><span class="num">09</span><span>用語集</span><span class="done" data-done-slug="09_glossary" title="読了"></span></a></li></ul><h2>リンク</h2><p class="rail-note"><a href="https://github.com/mamoru1126/study_mpc_mppi" target="_blank" rel="noopener">このリポジトリ</a><br><a href="https://docs.nav2.org/configuration/packages/configuring-mppic.html" target="_blank" rel="noopener">Nav2 の MPPI の設定ガイド</a><br><a href="https://homes.cs.washington.edu/~bboots/files/InformationTheoreticMPC.pdf" target="_blank" rel="noopener">MPPI の論文 (Williams et al. 2017)</a></p><p class="rail-note">各章の最後で「この章を読んだ」にチェックすると、ここに印が付きます (このブラウザにだけ保存)。</p></nav>
+<main>
+<article class="article">
+<div class="chapter-meta"><span class="chip time">第 08 章</span><span class="chip mppi">MPPI</span><span class="chip nav2">Nav2</span><span class="chip time">目安 1 時間</span></div>
+<h1 id="08-nav2-の-mppi-コントローラ">08. Nav2 の MPPI コントローラ</h1>
+<h2 id="この章のゴール">この章のゴール</h2>
+<ul>
+<li>Nav2 の MPPI コントローラのパラメータが、<a href="05_mppi_basics.html">05</a>・<a href="06_mppi_theory.html">06 章</a> の式のどこに当たるか説明できる</li>
+<li>ホライズン、サンプル数、制御周期の関係を数値で見積もれる</li>
+<li>critic (コストの項) の組み合わせ方と、調整の順番を知る</li>
+</ul>
+<blockquote>
+<p><strong>つながり</strong>
+05・06 章の式を、実際に使われているソフトウェアの設定に結びつけます。パラメータ名と既定値は、2026 年 11 月に確認した Nav2 のドキュメントによります。版によって変わることがあるので、使う版のドキュメントを必ず確認してください。</p>
+</blockquote>
+<hr />
+<h2 id="1-nav2-の-mppi-とは">1. Nav2 の MPPI とは</h2>
+<p>Nav2 (ROS 2 のナビゲーションスタック) の MPPI コントローラは、大域的な経路に沿って進みながら、コストマップを見て障害物を避ける <strong>局所的な軌道計画器</strong> です。ドキュメントでは、凸でなくても微分できなくてもよいコスト関数を使えることが、大きな利点として挙げられています。これは <a href="05_mppi_basics.html">05 章</a> 7 節の「微分がいらない」強みそのものです。</p>
+<p>運動モデルは、差動 2 輪 (<code>DiffDrive</code>)、全方向移動 (<code>Omni</code>)、アッカーマン (<code>Ackermann</code>) から選びます。この教材のロボットは <code>DiffDrive</code> に当たります。</p>
+<p>1 周期の流れは次のとおりで、05 章の 1 周期とほぼ同じです。</p>
+<p><img alt="Nav2 の MPPI の 1 周期" src="figures/fig_nav2_mppi.svg" /></p>
+<p>05 章との違いは、⑥ の平滑化 (Savitzky–Golay フィルタ) が入ることと、⑤ の重みに補正項 (<code>gamma</code>) が入ることです。</p>
+<h2 id="2-パラメータと式の対応">2. パラメータと式の対応</h2>
+<table>
+<thead>
+<tr>
+<th>記号</th>
+<th>パラメータ</th>
+<th>既定値</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(\lambda\)</span></td>
+<td><code>temperature</code></td>
+<td>0.3</td>
+<td>コスト差の目盛り。0 に近いほどコストの低い候補に重みが集中し、とても大きいとただの平均に近づく</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(K\)</span></td>
+<td><code>batch_size</code></td>
+<td>1000</td>
+<td>1 回の更新で試す候補 (サンプル) の数。「1000 なら 50 Hz、2000 なら 30 Hz くらいで良い結果」とされている</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(N\)</span></td>
+<td><code>time_steps</code></td>
+<td>56</td>
+<td>ホライズンのステップ数</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\Delta t\)</span></td>
+<td><code>model_dt</code></td>
+<td>0.05 s</td>
+<td>1 ステップの時間。制御周期に合わせることが勧められている (例: 20 Hz なら 0.05 秒)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\Sigma\)</span></td>
+<td><code>vx_std</code>, <code>vy_std</code>, <code>wz_std</code></td>
+<td>0.2 ずつ</td>
+<td>入力ごとのゆらぎの標準偏差 (<span class="arithmatex">\(\Sigma\)</span> は対角行列)</td>
+</tr>
+<tr>
+<td>補正項の係数</td>
+<td><code>gamma</code></td>
+<td>0.015</td>
+<td><a href="06_mppi_theory.html">06 章</a> 3.1 節の <span class="arithmatex">\(u^\top \Sigma^{-1} \varepsilon\)</span> の係数。「なめらかさ (大きい値) と省エネ (小さい値) のつり合い」</td>
+</tr>
+<tr>
+<td>反復回数</td>
+<td><code>iteration_count</code></td>
+<td>1</td>
+<td>1 周期の更新回数。増やすより <code>batch_size</code> を増やすことが勧められている</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(u_{\min}, u_{\max}\)</span></td>
+<td><code>vx_max</code>, <code>vx_min</code>, <code>wz_max</code></td>
+<td>0.5, −0.35, 1.9</td>
+<td>速度の上下限 (m/s, rad/s)</td>
+</tr>
+<tr>
+<td>加速度の上下限</td>
+<td><code>ax_max</code>, <code>ax_min</code>, <code>az_max</code></td>
+<td>3.0, −3.0, 3.5</td>
+<td>加速度の上下限 (m/s², rad/s²)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(S\)</span></td>
+<td><code>critics</code></td>
+<td>—</td>
+<td>足し合わせるコストの項 (critic) の一覧</td>
+</tr>
+</tbody>
+</table>
+<p>既定値は版によって違うことがあります (例えば <code>wz_std</code> を 0.4 と書いている版の資料もあります)。</p>
+<h2 id="3-数字で関係をつかむ">3. 数字で関係をつかむ</h2>
+<p><strong>ホライズン</strong>: <span class="arithmatex">\(N \Delta t = 56 \times 0.05 = 2.8\)</span> 秒。最高速度 0.5 m/s なら、1.4 m 先まで予測します。ドキュメントでは、最高速度でホライズンの間に進む範囲が、コストマップに収まるようにすることが勧められています (収まらないと、速度が不自然に抑えられてしまうとされています)。</p>
+<p><strong>計算量</strong>: 1 回の更新で <span class="arithmatex">\(1000 \times 56 = 56{,}000\)</span> ステップぶんのモデル計算と、それぞれの点での critic の計算をします。20 Hz なら 1 秒に 112 万ステップです。Nav2 の実装は、これを配列演算 (Humble では xtensor というライブラリ) で、全部の候補をまとめて計算しています。</p>
+<p><strong>制御周期と model_dt</strong>: Humble の実装では、制御周期が <code>model_dt</code> と等しいとき、前回の制御列を 1 つずらす処理 (<a href="01_optimal_control.html">01 章</a> 4.2 節のウォームスタート) が有効になります。</p>
+<p><strong>ゆらぎの大きさ</strong>: <code>vx_std</code> = 0.2 m/s は、最高速度 0.5 m/s の 40 % です。かなり大きくゆらがせて、広く探していることが分かります。</p>
+<p><strong>temperature</strong>: <span class="arithmatex">\(\lambda = 0.3\)</span> なら、コストが 0.3 違うと重みが <span class="arithmatex">\(1/e\)</span> 倍、1 違うと <span class="arithmatex">\(e^{-1/0.3} = 0.036\)</span> 倍です。これが「大きな差」かどうかは、critic の重み (コストの大きさ) で決まります (<a href="05_mppi_basics.html">05 章</a> 3 節)。</p>
+<h2 id="4-critic--コストの項">4. critic = コストの項</h2>
+<p>Nav2 では、コスト <span class="arithmatex">\(S\)</span> を <strong>critic</strong> と呼ばれるプラグインの和で作ります。各 critic は、候補の軌道ごとに「重み × (項)<span class="arithmatex">\(^{\text{べき}}\)</span>」を計算して足します (<code>cost_weight</code>, <code>cost_power</code>)。</p>
+<table>
+<thead>
+<tr>
+<th>critic</th>
+<th>何を罰するか</th>
+<th>既定の重み</th>
+<th>この教材のコストでは</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ConstraintCritic</code></td>
+<td>速度などの制約を破ること</td>
+<td>4.0</td>
+<td>上下限 (デモでは切っている)</td>
+</tr>
+<tr>
+<td><code>CostCritic</code></td>
+<td>コストマップの値 (障害物への近さ)。衝突は非常に大きな値</td>
+<td>3.81</td>
+<td>人の罰。衝突の値は「接触だけ罰」の段差に近い</td>
+</tr>
+<tr>
+<td><code>ObstaclesCritic</code></td>
+<td>障害物までの距離 (<code>CostCritic</code> の代わりに使う)</td>
+<td>20.0 と 1.5 (危険と反発の 2 つ)</td>
+<td>人の罰</td>
+</tr>
+<tr>
+<td><code>PathAlignCritic</code></td>
+<td>経路からのずれ</td>
+<td>10.0</td>
+<td>目標点からのずれ</td>
+</tr>
+<tr>
+<td><code>PathFollowCritic</code></td>
+<td>経路の少し先の点へ進めていないこと</td>
+<td>5.0</td>
+<td>目標点からのずれ</td>
+</tr>
+<tr>
+<td><code>PathAngleCritic</code></td>
+<td>経路の方向と向きのずれ</td>
+<td>2.2</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>GoalCritic</code></td>
+<td>ゴールへの距離 (近くなってから効く)</td>
+<td>5.0</td>
+<td>終端コスト</td>
+</tr>
+<tr>
+<td><code>GoalAngleCritic</code></td>
+<td>ゴールでの向きのずれ (近くなってから効く)</td>
+<td>3.0</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>PreferForwardCritic</code></td>
+<td>後ろ向きに進むこと</td>
+<td>5.0</td>
+<td>(<span class="arithmatex">\(v \ge 0\)</span> に制限)</td>
+</tr>
+<tr>
+<td><code>TwirlingCritic</code></td>
+<td>不必要に回ること (角速度の大きさ)</td>
+<td>10.0</td>
+<td><span class="arithmatex">\(q_\omega \omega^2\)</span></td>
+</tr>
+<tr>
+<td><code>VelocityDeadbandCritic</code></td>
+<td>動き出せないほど小さい速度</td>
+<td>35.0</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>どの critic を使うかは <code>critics</code> に並べて選びます。<a href="01_optimal_control.html">01 章</a> のコストが「ずれ + 回りすぎ + 人への近さ」の和だったのと同じ考え方で、項を増やしたり重みを変えたりして「良い動き」を表します。</p>
+<h2 id="5-調整の考え方">5. 調整の考え方</h2>
+<h3 id="51-ドキュメントの勧め">5.1 ドキュメントの勧め</h3>
+<ul>
+<li>まず障害物の回避、次に経路の追従、最後に経路への整列の順に調整する</li>
+<li>重みのつり合いを保つ。経路への整列を重くしすぎると、動く障害物をよけるために経路から離れることができなくなる</li>
+<li>経路の追従が要らない用途なら、経路の critic を外してもよい</li>
+</ul>
+<h3 id="52-0506-章の知識で考える">5.2 05・06 章の知識で考える</h3>
+<table>
+<thead>
+<tr>
+<th>症状</th>
+<th>考えられる原因</th>
+<th>試すこと</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>指令がガタガタする</td>
+<td><span class="arithmatex">\(\lambda\)</span> が小さすぎて、たまたま良かった 1 本に引きずられている。ゆらぎが大きすぎる</td>
+<td><code>temperature</code> を上げる、<code>vx_std</code> / <code>wz_std</code> を下げる、<code>TwirlingCritic</code> を重くする</td>
+</tr>
+<tr>
+<td>反応が鈍い、よけ始めが遅い</td>
+<td><span class="arithmatex">\(\lambda\)</span> が大きすぎて平均に近い。ホライズンが短い</td>
+<td><code>temperature</code> を下げる、<code>time_steps</code> か <code>model_dt</code> を見直す</td>
+</tr>
+<tr>
+<td>狭い所の抜け道を見つけられない</td>
+<td>ゆらぎが小さく、その道を通るサンプルがない</td>
+<td><code>vx_std</code> / <code>wz_std</code> を上げる、<code>batch_size</code> を増やす</td>
+</tr>
+<tr>
+<td>critic の重みを変えたら性格が変わった</td>
+<td>コストの大きさが変わり、<span class="arithmatex">\(\lambda\)</span> の効き方が変わった</td>
+<td><code>temperature</code> も合わせて調整する (コストを 2 倍にしたら <span class="arithmatex">\(\lambda\)</span> も 2 倍)</td>
+</tr>
+<tr>
+<td>計算が間に合わない</td>
+<td><span class="arithmatex">\(K \times N\)</span> が大きすぎる</td>
+<td><code>batch_size</code> か <code>time_steps</code> を減らす、制御周期を下げる</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-この教材のデモとの違い">6. この教材のデモとの違い</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>この教材のデモ</th>
+<th>Nav2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>コスト</td>
+<td>01 章の式 (目標点・回りすぎ・人)</td>
+<td>critic の和 (コストマップを参照)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\lambda\)</span></td>
+<td>1 (既定)</td>
+<td>0.3 (既定)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(K\)</span>, <span class="arithmatex">\(N\)</span>, <span class="arithmatex">\(\Delta t\)</span></td>
+<td>300, 30, 0.1 秒</td>
+<td>1000, 56, 0.05 秒</td>
+</tr>
+<tr>
+<td>補正項</td>
+<td>なし</td>
+<td><code>gamma</code> = 0.015</td>
+</tr>
+<tr>
+<td>平滑化</td>
+<td>なし</td>
+<td>Savitzky–Golay フィルタ</td>
+</tr>
+<tr>
+<td>加速度の制限</td>
+<td>なし</td>
+<td><code>ax_max</code> など</td>
+</tr>
+</tbody>
+</table>
+<p>コストの大きさが違うので、デモの <span class="arithmatex">\(\lambda\)</span> と Nav2 の <code>temperature</code> は直接は比べられません。</p>
+<h2 id="理解度チェック">理解度チェック</h2>
+<ol>
+<li><code>time_steps</code> = 56、<code>model_dt</code> = 0.05 のとき、ホライズンは何秒か。<code>vx_max</code> = 0.5 m/s なら何 m 先まで予測するか?</li>
+<li><code>temperature</code> を 0.3 から 0.03 にすると、どうなると予想されるか? 3 にすると?</li>
+<li>critic の重みを全部 10 倍にしたら、<code>temperature</code> はどうすれば同じふるまいになるか?</li>
+<li><code>iteration_count</code> を増やすより <code>batch_size</code> を増やすことが勧められているのはなぜか。06 章の見方で考えてみよう</li>
+<li><code>gamma</code> の項は、06 章のどの式に当たるか?</li>
+</ol>
+<details>
+<summary>答えの例</summary>
+<ol>
+<li><span class="arithmatex">\(56 \times 0.05 = 2.8\)</span> 秒。<span class="arithmatex">\(0.5 \times 2.8 = 1.4\)</span> m 先まで。</li>
+<li>0.03: コストの低い少数の候補に重みが集中し (ESS が下がり)、指令がガタつきやすくなる。3: 重みがほぼ均等になり、更新が進みにくく、反応が鈍くなる。</li>
+<li><code>temperature</code> も 10 倍にする。重みはコストの差を <span class="arithmatex">\(\lambda\)</span> で割った値で決まるため。</li>
+<li>考え方の一例: 1 回の更新はぼかしたコストの坂を下る 1 歩で、その傾きの推定の正確さはサンプル数で決まる (<a href="06_mppi_theory.html">06 章</a> 4 節)。同じ計算量なら、不正確な傾きで何歩も進むより、正確な傾きで 1 歩進み、残りは次の周期 (ウォームスタート) に任せるほうが安定しやすい。</li>
+<li>06 章 3.1 節の補正項 <span class="arithmatex">\(\lambda \sum_t u_t^\top \Sigma^{-1} \varepsilon_t^k\)</span> (<span class="arithmatex">\(\lambda\)</span> の代わりに <code>gamma</code> を係数にしたもの)。</li>
+</ol>
+</details>
+<h2 id="もっと知りたい人へ">もっと知りたい人へ</h2>
+<ul>
+<li>Nav2, "Model Predictive Path Integral Controller" (設定ガイド): <a href="https://docs.nav2.org/configuration/packages/configuring-mppic.html">https://docs.nav2.org/configuration/packages/configuring-mppic.html</a></li>
+<li>Nav2, nav2_mppi_controller の README (Jazzy, API ドキュメント内): <a href="https://api.nav2.org/nav2-jazzy/html/md_nav2_mppi_controller_README.html">https://api.nav2.org/nav2-jazzy/html/md_nav2_mppi_controller_README.html</a></li>
+</ul>
+<label class="read-toggle"><input type="checkbox" id="read-toggle" data-slug="08_nav2_mppi"> この章を読んだ</label>
+<nav class="pager" aria-label="前後の章"><a class="prev" href="07_comparison.html"><small>前へ</small>07 MPC と MPPI の比較</a><a class="next" href="09_glossary.html"><small>次へ</small>09 用語集</a></nav>
+</article>
+</main>
+</div>
+<script src="assets/app.js"></script>
+<script src="assets/ctrl.js"></script>
+<script src="assets/demos.js"></script>
+</body>
+</html>

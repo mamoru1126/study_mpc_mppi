@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>最小二乗とガウス・ニュートン法 | MPC × MPPI 学習ノート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/katex/katex.css">
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/auto-render.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 Q 12 12 20 4" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 Q 12 12 20 20" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 H 20" fill="none" stroke="var(--mpc)" stroke-width="2.4" stroke-linecap="round"/><circle cx="5" cy="12" r="3" fill="var(--ink)"/></svg><span>MPC × MPPI 学習ノート</span></a>
+  <button class="menu-btn" type="button" aria-expanded="false" aria-label="目次を開く">目次</button>
+</header>
+<div class="layout">
+<nav class="rail" aria-label="章の一覧"><h2>目次</h2><ul class="toc"><li><a href="index.html"><span class="num">◆</span><span>はじめに</span><span></span></a></li><li><a href="00_roadmap.html"><span class="num">00</span><span>学習ロードマップ</span><span class="done" data-done-slug="00_roadmap" title="読了"></span></a></li><li><a href="01_optimal_control.html"><span class="num">01</span><span>最適制御問題と receding horizon</span><span class="done" data-done-slug="01_optimal_control" title="読了"></span></a></li><li><a href="02_least_squares_gauss_newton.html" aria-current="page"><span class="num">02</span><span>最小二乗とガウス・ニュートン法</span><span class="done" data-done-slug="02_least_squares_gauss_newton" title="読了"></span></a></li><li><a href="03_linear_mpc.html"><span class="num">03</span><span>線形 MPC</span><span class="done" data-done-slug="03_linear_mpc" title="読了"></span></a></li><li><a href="04_nonlinear_mpc.html"><span class="num">04</span><span>非線形 MPC</span><span class="done" data-done-slug="04_nonlinear_mpc" title="読了"></span></a></li><li><a href="05_mppi_basics.html"><span class="num">05</span><span>MPPI の考え方</span><span class="done" data-done-slug="05_mppi_basics" title="読了"></span></a></li><li><a href="06_mppi_theory.html"><span class="num">06</span><span>MPPI の理論</span><span class="done" data-done-slug="06_mppi_theory" title="読了"></span></a></li><li><a href="07_comparison.html"><span class="num">07</span><span>MPC と MPPI の比較</span><span class="done" data-done-slug="07_comparison" title="読了"></span></a></li><li><a href="08_nav2_mppi.html"><span class="num">08</span><span>Nav2 の MPPI</span><span class="done" data-done-slug="08_nav2_mppi" title="読了"></span></a></li><li><a href="09_glossary.html"><span class="num">09</span><span>用語集</span><span class="done" data-done-slug="09_glossary" title="読了"></span></a></li></ul><h2>リンク</h2><p class="rail-note"><a href="https://github.com/mamoru1126/study_mpc_mppi" target="_blank" rel="noopener">このリポジトリ</a><br><a href="https://docs.nav2.org/configuration/packages/configuring-mppic.html" target="_blank" rel="noopener">Nav2 の MPPI の設定ガイド</a><br><a href="https://homes.cs.washington.edu/~bboots/files/InformationTheoreticMPC.pdf" target="_blank" rel="noopener">MPPI の論文 (Williams et al. 2017)</a></p><p class="rail-note">各章の最後で「この章を読んだ」にチェックすると、ここに印が付きます (このブラウザにだけ保存)。</p></nav>
+<main>
+<article class="article">
+<div class="chapter-meta"><span class="chip time">第 02 章</span><span class="chip math">数学</span><span class="chip opt">最適化</span><span class="chip time">目安 2 時間</span></div>
+<h1 id="02-最小二乗とガウスニュートン法">02. 最小二乗とガウス・ニュートン法</h1>
+<h2 id="この章のゴール">この章のゴール</h2>
+<ul>
+<li>コストを「残差の 2 乗和」<span class="arithmatex">\(F(z) = \frac12 \lVert r(z) \rVert^2\)</span> の形で書ける</li>
+<li>残差が 1 つのときのニュートン法 (接線で 0 を探す) が分かる</li>
+<li>ガウス・ニュートン法の式 <span class="arithmatex">\(J^\top J\,\Delta = -J^\top r\)</span> を導けて、各項の意味を説明できる</li>
+<li>LM 法の減衰 <span class="arithmatex">\(\mu\)</span> の役割が分かる</li>
+</ul>
+<blockquote>
+<p><strong>つながり</strong>
+MPC の多くは、<a href="01_optimal_control.html">01 章</a> のコストを「残差の 2 乗和」と見て、この章のガウス・ニュートン法やその仲間で解きます。さらに <a href="06_mppi_theory.html">06 章</a> では、MPPI の更新が、この章の LM 法と同じ形の式になることを見ます。</p>
+</blockquote>
+<hr />
+<h2 id="0-この章で使う記号">0. この章で使う記号</h2>
+<table>
+<thead>
+<tr>
+<th>記号</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(z\)</span></td>
+<td>変数 (<span class="arithmatex">\(n\)</span> 個の数を並べたベクトル)。MPC では入力の列 <span class="arithmatex">\(U\)</span></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(r(z)\)</span></td>
+<td>残差ベクトル。0 にしたい「ずれ」を <span class="arithmatex">\(m\)</span> 個並べたもの</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(F(z) = \frac12 \lVert r(z) \rVert^2\)</span></td>
+<td>コスト (残差の 2 乗和の半分。<span class="arithmatex">\(\frac12\)</span> は微分をきれいにするためで、答えは変わらない)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(J = \partial r / \partial z\)</span></td>
+<td>ヤコビアン。<span class="arithmatex">\(m \times n\)</span> の行列で、<span class="arithmatex">\(i\)</span> 行 <span class="arithmatex">\(j\)</span> 列は「<span class="arithmatex">\(z_j\)</span> を少し動かすと <span class="arithmatex">\(r_i\)</span> がどれだけ変わるか」</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\Delta\)</span></td>
+<td>1 回の反復で <span class="arithmatex">\(z\)</span> を直す量</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\mu\)</span></td>
+<td>LM 法の減衰 (慎重さのつまみ)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="1-最小二乗-ずれを並べて-2-乗和にする">1. 最小二乗: ずれを並べて 2 乗和にする</h2>
+<h3 id="11-例-モーターの速度の立ち上がり">1.1 例: モーターの速度の立ち上がり</h3>
+<p>モーターに一定の電圧をかけると、速度は <span class="arithmatex">\(y(t) = a\,(1 - e^{-bt})\)</span> のように立ち上がります。<span class="arithmatex">\(a\)</span> は最終的な速度、<span class="arithmatex">\(b\)</span> は立ち上がりの速さです。6 回測ったデータから <span class="arithmatex">\(a\)</span> と <span class="arithmatex">\(b\)</span> を求めます。</p>
+<table>
+<thead>
+<tr>
+<th><span class="arithmatex">\(t\)</span> [s]</th>
+<th>0.25</th>
+<th>0.5</th>
+<th>1.0</th>
+<th>1.5</th>
+<th>2.0</th>
+<th>3.0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(y\)</span></td>
+<td>0.416</td>
+<td>0.582</td>
+<td>0.941</td>
+<td>1.062</td>
+<td>1.131</td>
+<td>1.182</td>
+</tr>
+</tbody>
+</table>
+<p>測定ごとのずれ (残差) は <span class="arithmatex">\(r_i(a, b) = a\,(1 - e^{-b t_i}) - y_i\)</span> です。ノイズがあるので 6 個のずれを全部 0 にはできません。そこで、2 乗和を最小にします。</p>
+<div class="arithmatex">\[
+F(a, b) = \frac12 \sum_{i=1}^{6} r_i(a, b)^2
+\]</div>
+<h3 id="12-01-章のコストも同じ形">1.2 01 章のコストも同じ形</h3>
+<p><a href="01_optimal_control.html">01 章</a> のコストは、重みの平方根をかけたずれの 2 乗の和に書き直せます。</p>
+<div class="arithmatex">\[
+\begin{aligned}
+& q_{\mathrm{ref}} \lVert p_t - p_t^{\mathrm{ref}} \rVert^2 + q_\omega\, \omega_t^2 + \cdots \\
+&= \bigl\lVert \sqrt{q_{\mathrm{ref}}}\,(p_t - p_t^{\mathrm{ref}}) \bigr\rVert^2 + \bigl(\sqrt{q_\omega}\, \omega_t\bigr)^2 + \cdots
+\end{aligned}
+\]</div>
+<p>ですから、これらを全時刻ぶん縦に並べたものを残差ベクトル <span class="arithmatex">\(r(U)\)</span> とすれば、01 章の最適制御問題もこの章の形 <span class="arithmatex">\(\lVert r(U) \rVert^2\)</span> になります (<a href="04_nonlinear_mpc.html">04 章</a>)。</p>
+<h3 id="13-残差が-z-の-1-次式なら一発で解ける">1.3 残差が <span class="arithmatex">\(z\)</span> の 1 次式なら一発で解ける</h3>
+<p>残差が <span class="arithmatex">\(r(z) = Az - b\)</span> の形 (<span class="arithmatex">\(A\)</span> は定数の行列) なら、コストは <span class="arithmatex">\(z\)</span> の 2 次関数なので、勾配を 0 とおけば答えが出ます。</p>
+<div class="arithmatex">\[
+\nabla F = A^\top (Az - b) = 0 \quad \Longrightarrow \quad A^\top A\, z = A^\top b
+\]</div>
+<p>これを <strong>正規方程式</strong> と呼びます。<a href="03_linear_mpc.html">03 章</a> の線形 MPC は、この形で解けます。残差が非線形 (1.1 の例や、2 輪ロボット) のときは、このあと説明するように反復が必要です。</p>
+<h2 id="2-残差が-1-つ-ニュートン法-接線で-0-を探す">2. 残差が 1 つ: ニュートン法 (接線で 0 を探す)</h2>
+<p>まず一番簡単な場合として、変数も残差も 1 つで、<span class="arithmatex">\(r(z) = 0\)</span> を解く問題を考えます。今の点 <span class="arithmatex">\(z\)</span> のまわりで <span class="arithmatex">\(r\)</span> を接線 (1 次式) で近似し、接線が 0 になる所へ移ります。</p>
+<div class="arithmatex">\[
+r(z + \Delta) \approx r(z) + r'(z)\,\Delta = 0
+\quad \Longrightarrow \quad
+z \leftarrow z - \frac{r(z)}{r'(z)}
+\]</div>
+<p><img alt="ニュートン法: 接線で 0 を探す" src="figures/fig_newton_tangent.svg" /></p>
+<p><span class="arithmatex">\(r(z) = z^2 - 2\)</span> (答えは <span class="arithmatex">\(\sqrt2 = 1.414214\cdots\)</span>) で、<span class="arithmatex">\(z_0 = 2\)</span> から始めると、次のようになります。</p>
+<table>
+<thead>
+<tr>
+<th>反復</th>
+<th><span class="arithmatex">\(z\)</span></th>
+<th><span class="arithmatex">\(r(z)\)</span></th>
+<th>答えとの差</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>2.000000</td>
+<td>2.000000</td>
+<td>0.586</td>
+</tr>
+<tr>
+<td>1</td>
+<td>1.500000</td>
+<td>0.250000</td>
+<td>0.0858</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1.416667</td>
+<td>0.006944</td>
+<td>0.00245</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1.414216</td>
+<td>0.000006</td>
+<td>0.0000021</td>
+</tr>
+</tbody>
+</table>
+<p>答えに近づくほど接線の近似が正確になり、合っている桁数がおよそ倍々に増えます (2 次収束)。一方、答えから遠い所では接線の近似が外れ、遠くへ飛ばされることがあります。下のデモの「arctan z」で、<span class="arithmatex">\(z_0\)</span> を 1.4 より大きくして確かめてください。</p>
+<div data-demo="newton"></div>
+
+<h2 id="3-ガウスニュートン法">3. ガウス・ニュートン法</h2>
+<h3 id="31-考え方-残差を-1-次式で近似して13-の方法で解く">3.1 考え方: 残差を 1 次式で近似して、1.3 の方法で解く</h3>
+<p>残差が <span class="arithmatex">\(m\)</span> 個、変数が <span class="arithmatex">\(n\)</span> 個の一般の場合に広げます。手順は 3 つです。</p>
+<ol>
+<li>今の <span class="arithmatex">\(z\)</span> のまわりで、残差を 1 次式で近似する: <span class="arithmatex">\(r(z + \Delta) \approx r + J\Delta\)</span></li>
+<li>近似した残差の 2 乗和を最小にする <span class="arithmatex">\(\Delta\)</span> を求める。<span class="arithmatex">\(\Delta\)</span> の 1 次式の残差なので、1.3 の正規方程式で一発で求まる</li>
+<li><span class="arithmatex">\(z \leftarrow z + \Delta\)</span> として、1 に戻る</li>
+</ol>
+<div class="arithmatex">\[
+\begin{gathered}
+\Delta = \arg\min_{\Delta}\ \frac12 \lVert r + J\Delta \rVert^2 \\
+\Longleftrightarrow \quad J^\top J\, \Delta = -J^\top r \qquad (1)
+\end{gathered}
+\]</div>
+<p>式 (1) の導き方: <span class="arithmatex">\(\frac12 \lVert r + J\Delta \rVert^2 = \frac12 r^\top r + \Delta^\top J^\top r + \frac12 \Delta^\top J^\top J \Delta\)</span> を <span class="arithmatex">\(\Delta\)</span> で微分して 0 とおくと、<span class="arithmatex">\(J^\top r + J^\top J\Delta = 0\)</span> です。</p>
+<h3 id="32-各項の意味">3.2 各項の意味</h3>
+<table>
+<thead>
+<tr>
+<th>項</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(J\)</span> (<span class="arithmatex">\(m \times n\)</span>)</td>
+<td><span class="arithmatex">\(i\)</span> 行目は「変数を少しずつ動かしたとき、残差 <span class="arithmatex">\(r_i\)</span> がどれだけ変わるか」</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(g = J^\top r\)</span></td>
+<td>コストの勾配 <span class="arithmatex">\(\nabla F\)</span>。どちらへ動くとコストが増えるか</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(J^\top J\)</span> (<span class="arithmatex">\(n \times n\)</span>)</td>
+<td>コストの曲がり具合 (ヘッセ行列) の近似。曲がりがきつい方向には少し、ゆるい方向には大きく動く</td>
+</tr>
+</tbody>
+</table>
+<p>変数も残差も 1 つなら、<span class="arithmatex">\(\Delta = -r\,r' / r'^2 = -r / r'\)</span> となり、2 章のニュートン法と同じになります。</p>
+<h3 id="33-数値で-1-回やってみる">3.3 数値で 1 回やってみる</h3>
+<p>1.1 の例で、<span class="arithmatex">\((a, b) = (1, 1)\)</span> から始めます。残差の微分は <span class="arithmatex">\(\partial r_i / \partial a = 1 - e^{-b t_i}\)</span>、<span class="arithmatex">\(\partial r_i / \partial b = a\, t_i e^{-b t_i}\)</span> です。</p>
+<div class="arithmatex">\[
+r = \begin{bmatrix} -0.195 \\ -0.189 \\ -0.309 \\ -0.285 \\ -0.266 \\ -0.232 \end{bmatrix},
+\quad
+J = \begin{bmatrix} 0.221 & 0.195 \\ 0.393 & 0.303 \\ 0.632 & 0.368 \\ 0.777 & 0.335 \\ 0.865 & 0.271 \\ 0.950 & 0.149 \end{bmatrix}
+\]</div>
+<div class="arithmatex">\[
+\begin{gathered}
+J^\top J = \begin{bmatrix} 2.857 & 1.031 \\ 1.031 & 0.473 \end{bmatrix},
+\quad
+J^\top r = \begin{bmatrix} -0.985 \\ -0.411 \end{bmatrix} \\
+\Longrightarrow \quad
+\Delta = \begin{bmatrix} 0.146 \\ 0.552 \end{bmatrix}
+\end{gathered}
+\]</div>
+<p>残差がすべて負 (モデルがデータより小さい) なので、<span class="arithmatex">\(a\)</span> と <span class="arithmatex">\(b\)</span> を両方大きくする向きに動きます。新しい点は <span class="arithmatex">\((a, b) = (1.146, 1.552)\)</span> で、コストは次のように減ります。</p>
+<table>
+<thead>
+<tr>
+<th>反復</th>
+<th>0</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(F\)</span></td>
+<td>0.187</td>
+<td>0.00473</td>
+<td>0.00216</td>
+<td>0.00216</td>
+</tr>
+</tbody>
+</table>
+<p>2 回でほぼ収束し、<span class="arithmatex">\(a = 1.193\)</span>、<span class="arithmatex">\(b = 1.491\)</span> になります (データは <span class="arithmatex">\(a = 1.2\)</span>、<span class="arithmatex">\(b = 1.5\)</span> にノイズを足して作りました)。</p>
+<h3 id="34-ニュートン法との違い-2-階微分を捨てている">3.4 ニュートン法との違い: 2 階微分を捨てている</h3>
+<p><span class="arithmatex">\(F = \frac12 \lVert r \rVert^2\)</span> の本当のヘッセ行列は次の形です。</p>
+<div class="arithmatex">\[
+\nabla^2 F = J^\top J + \sum_{i=1}^{m} r_i\, \nabla^2 r_i
+\]</div>
+<p>ニュートン法はこれを全部使いますが、ガウス・ニュートン法は第 2 項を捨てます。そのおかげで</p>
+<ul>
+<li>2 階微分を計算しなくてよい</li>
+<li><span class="arithmatex">\(J^\top J\)</span> は必ず半正定値なので、<span class="arithmatex">\(J\)</span> の列が独立なら <span class="arithmatex">\(\Delta\)</span> は必ずコストが下がる向きを向く</li>
+</ul>
+<p>という利点があります。捨てた項は残差 <span class="arithmatex">\(r_i\)</span> に比例するので、答えの近くで残差が小さいときや、残差が 1 次式に近いときは小さく、ニュートン法とほぼ同じ速さで収束します。演習 2 では、答えの近くで <span class="arithmatex">\(J^\top J\)</span> の対角が 3.65 と 0.25 なのに対し、捨てた項は 0.001 程度でした。</p>
+<h3 id="35-最急降下法との比較">3.5 最急降下法との比較</h3>
+<p>勾配の逆向きに一定の歩幅で進む最急降下法 <span class="arithmatex">\(\Delta = -\alpha J^\top r\)</span> と比べます (演習 2)。</p>
+<p><img alt="演習 2: ガウス・ニュートン法・LM 法・最急降下法" src="figures/ex02_gauss_newton.png" /></p>
+<ul>
+<li>最急降下法 (紫) は、等高線が細長い谷をジグザグに進み、50 回でも収束しきらない</li>
+<li>ガウス・ニュートン法 (青) は、曲がり具合 <span class="arithmatex">\(J^\top J\)</span> で歩幅と向きを補正するので、2 回で答えに着く</li>
+</ul>
+<h2 id="4-lm-法-うまくいかないときは慎重に">4. LM 法: うまくいかないときは慎重に</h2>
+<h3 id="41-ガウスニュートン法が暴れる場合">4.1 ガウス・ニュートン法が暴れる場合</h3>
+<p>答えから遠い所では 1 次式の近似が外れ、<span class="arithmatex">\(\Delta\)</span> が大きすぎてコストが上がることがあります。演習 2 で <span class="arithmatex">\((a, b) = (0.5, 0.3)\)</span> から始めると、ガウス・ニュートン法のコストは 1.7 → 25 → 0.23 → 7,500,000 → … と暴れます (図の中央の点線)。</p>
+<h3 id="42-減衰を足す">4.2 減衰を足す</h3>
+<p>そこで、<span class="arithmatex">\(J^\top J\)</span> に減衰の項を足します。</p>
+<div class="arithmatex">\[
+\begin{gathered}
+(J^\top J + \mu D)\, \Delta = -J^\top r \qquad (2) \\
+D = I \ \text{または}\ \operatorname{diag}(J^\top J)
+\end{gathered}
+\]</div>
+<ul>
+<li><span class="arithmatex">\(\mu\)</span> が大きいと <span class="arithmatex">\(\Delta \approx -\frac{1}{\mu} D^{-1} J^\top r\)</span> となり、小さな歩幅の最急降下法 (慎重)</li>
+<li><span class="arithmatex">\(\mu\)</span> が小さいとガウス・ニュートン法 (大胆)</li>
+</ul>
+<p><span class="arithmatex">\(\mu\)</span> は次の規則で毎回調整します。この教材のコードでは、下がったら 1/3 倍、上がったら 4 倍にしています。</p>
+<ol>
+<li>式 (2) で <span class="arithmatex">\(\Delta\)</span> を求め、<span class="arithmatex">\(F(z + \Delta)\)</span> を計算する</li>
+<li>下がったら受け入れて、<span class="arithmatex">\(\mu\)</span> を小さくする (次はもっと大胆に)</li>
+<li>上がったら捨てて、<span class="arithmatex">\(\mu\)</span> を大きくして 1 に戻る (もっと慎重に)</li>
+</ol>
+<p>これを <strong>Levenberg–Marquardt (LM) 法</strong> と呼びます。<span class="arithmatex">\((0.5, 0.3)\)</span> からでも、コストは 1.7 → 0.17 → 0.0028 → 0.0022 と 3 回で収束します。</p>
+<h3 id="43-方法のまとめ">4.3 方法のまとめ</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>1 回のステップ</th>
+<th>必要なもの</th>
+<th>答えの近くでの速さ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>最急降下法</td>
+<td><span class="arithmatex">\(\Delta = -\alpha J^\top r\)</span></td>
+<td>1 階微分</td>
+<td>遅い</td>
+</tr>
+<tr>
+<td>ガウス・ニュートン法</td>
+<td><span class="arithmatex">\(\Delta = -(J^\top J)^{-1} J^\top r\)</span></td>
+<td>1 階微分 (<span class="arithmatex">\(J\)</span>)</td>
+<td>残差が小さいほど速い</td>
+</tr>
+<tr>
+<td>LM 法</td>
+<td><span class="arithmatex">\(\Delta = -(J^\top J + \mu D)^{-1} J^\top r\)</span></td>
+<td>1 階微分 (<span class="arithmatex">\(J\)</span>)</td>
+<td><span class="arithmatex">\(\mu\)</span> で上の 2 つの間を動く</td>
+</tr>
+<tr>
+<td>ニュートン法</td>
+<td><span class="arithmatex">\(\Delta = -(\nabla^2 F)^{-1} \nabla F\)</span></td>
+<td>2 階微分</td>
+<td>速い (2 次収束)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="44-変数に上下限があるとき">4.4 変数に上下限があるとき</h3>
+<p>入力には上下限があります。この教材のコードでは、ステップのあとに上下限で切る (射影する) という簡単な方法を使っています。きちんと扱うには、上下限を制約にした 2 次計画問題 (QP) を毎回解きます (<a href="03_linear_mpc.html">03 章</a>、<a href="04_nonlinear_mpc.html">04 章</a> の SQP)。</p>
+<h2 id="5-mpc-への橋渡し">5. MPC への橋渡し</h2>
+<ul>
+<li>線形モデルと 2 次コストなら、残差は入力の列 <span class="arithmatex">\(U\)</span> の 1 次式なので、ガウス・ニュートン法は 1 回で答えに着く → <a href="03_linear_mpc.html">03 章</a></li>
+<li>非線形モデルなら、ガウス・ニュートン法 (LM 法) を反復する → <a href="04_nonlinear_mpc.html">04 章</a></li>
+<li>そのときのヤコビアン <span class="arithmatex">\(J\)</span> は、モデルの微分の積 (連鎖律) で作る → <a href="04_nonlinear_mpc.html">04 章</a></li>
+</ul>
+<h2 id="演習-2">演習 2</h2>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>exercises/ex02_gauss_newton.py
+</code></pre></div>
+<p>ニュートン法の表、ガウス・ニュートン法の 1 回目の数値 (3.3 節)、3 つの方法の収束を出力し、図を作ります。</p>
+<p>試してみること:</p>
+<ul>
+<li>出発点を <code>(2.0, 0.2)</code> や <code>(1.0, 6.0)</code> に変えて、ガウス・ニュートン法と LM 法を比べる</li>
+<li><code>levenberg_marquardt()</code> の <code>mu / 3</code> と <code>mu *= 4</code> を変えると、収束はどう変わるか</li>
+</ul>
+<h2 id="理解度チェック">理解度チェック</h2>
+<ol>
+<li><span class="arithmatex">\(F(z) = \frac12 \lVert r(z) \rVert^2\)</span> の勾配を <span class="arithmatex">\(J\)</span> と <span class="arithmatex">\(r\)</span> で書くと?</li>
+<li>ガウス・ニュートン法が捨てている項は何か。なぜ捨ててもうまくいくことが多いのか?</li>
+<li><span class="arithmatex">\(J^\top J\)</span> が逆行列を持たないと何が困るか。LM 法はそれをどう助けるか?</li>
+<li>LM 法で <span class="arithmatex">\(\mu\)</span> を大きくすると、ステップはどうなるか?</li>
+<li><span class="arithmatex">\(r(z) = z^2 - 2\)</span> で <span class="arithmatex">\(z_0 = 1\)</span> から始めると、ニュートン法の <span class="arithmatex">\(z_1\)</span> はいくつか?</li>
+<li>残差がすべて <span class="arithmatex">\(z\)</span> の 1 次式なら、ガウス・ニュートン法は何回で収束するか?</li>
+</ol>
+<details>
+<summary>答えの例</summary>
+<ol>
+<li><span class="arithmatex">\(\nabla F = J^\top r\)</span>。</li>
+<li>本当のヘッセ行列の第 2 項 <span class="arithmatex">\(\sum_i r_i \nabla^2 r_i\)</span> (2 階微分の項)。残差 <span class="arithmatex">\(r_i\)</span> に比例するので、答えの近くで残差が小さいときや、残差が 1 次式に近いときは小さい。</li>
+<li>式 (1) が解けない (ある方向に動いても残差が変わらず、どれだけ動けばよいか決まらない)。LM 法は <span class="arithmatex">\(\mu D\)</span> を足すので、<span class="arithmatex">\(J^\top J + \mu D\)</span> は (<span class="arithmatex">\(\mu &gt; 0\)</span> で <span class="arithmatex">\(D\)</span> が正の対角なら) 必ず逆行列を持つ。</li>
+<li>歩幅が小さくなり、向きは勾配の逆向き (最急降下法) に近づく。</li>
+<li><span class="arithmatex">\(r(1) = -1\)</span>、<span class="arithmatex">\(r'(1) = 2\)</span> なので <span class="arithmatex">\(z_1 = 1 - (-1)/2 = 1.5\)</span>。</li>
+<li>1 回。1 次式の近似が正確なので、式 (1) の答えがそのまま最小点になる (1.3 の正規方程式と同じ)。</li>
+</ol>
+</details>
+<h2 id="もっと知りたい人へ">もっと知りたい人へ</h2>
+<ul>
+<li>J. Nocedal, S. J. Wright, <em>Numerical Optimization</em>, 2nd ed., Springer, 2006. 第 10 章が最小二乗問題 (ガウス・ニュートン法、LM 法) です。</li>
+<li>K. Madsen, H. B. Nielsen, O. Tingleff, <em>Methods for Non-Linear Least Squares Problems</em>, 2nd ed., IMM, DTU, 2004. LM 法の <span class="arithmatex">\(\mu\)</span> の調整などが丁寧に書かれた講義ノートです。</li>
+</ul>
+<label class="read-toggle"><input type="checkbox" id="read-toggle" data-slug="02_least_squares_gauss_newton"> この章を読んだ</label>
+<nav class="pager" aria-label="前後の章"><a class="prev" href="01_optimal_control.html"><small>前へ</small>01 最適制御問題と receding horizon</a><a class="next" href="03_linear_mpc.html"><small>次へ</small>03 線形 MPC</a></nav>
+</article>
+</main>
+</div>
+<script src="assets/app.js"></script>
+<script src="assets/ctrl.js"></script>
+<script src="assets/demos.js"></script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 856 272" width="856" height="272" font-family="'Noto Sans JP','Noto Sans CJK JP','Hiragino Sans','Yu Gothic','Meiryo',sans-serif" role="img" aria-label="Nav2 の MPPI の 1 周期。前回の制御列をずらし、ゆらぎを足した候補を batch_size 本作り、ロールアウトして critic でコストを計算し、temperature で重みをつけて平均し、平滑化して、最初の速度指令を送る">
+<title>Nav2 の MPPI の 1 周期。前回の制御列をずらし、ゆらぎを足した候補を batch_size 本作り、ロールアウトして critic でコストを計算し、temperature で重みをつけて平均し、平滑化して、最初の速度指令を送る</title>
+<defs>
+<marker id="ah-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f2733"/></marker>
+<marker id="ah-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker>
+<marker id="ah-mpc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2a78d6"/></marker>
+<marker id="ah-mppi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#eb6834"/></marker>
+<marker id="ah-opt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6250d6"/></marker>
+</defs>
+<rect width="856" height="272" fill="#ffffff"/>
+<rect x="16" y="30" width="194" height="88" rx="10" fill="#ffffff" stroke="#c8ced8" stroke-width="1.2"/>
+<text x="30" y="56" font-size="14" fill="#1f2733" font-weight="700" text-anchor="start">① ずらす</text>
+<text x="30" y="80" font-size="12.5" fill="#586273" text-anchor="start">前回の制御列を 1 つずらす</text>
+<text x="30" y="104" font-size="12" fill="#eb6834" font-family="'IBM Plex Mono','SFMono-Regular',Menlo,Consolas,monospace">model_dt</text>
+<rect x="226" y="30" width="194" height="88" rx="10" fill="#ffffff" stroke="#c8ced8" stroke-width="1.2"/>
+<text x="240" y="56" font-size="14" fill="#1f2733" font-weight="700" text-anchor="start">② ゆらぎを足す</text>
+<text x="240" y="80" font-size="12.5" fill="#586273" text-anchor="start">batch_size 本の候補</text>
+<text x="240" y="104" font-size="12" fill="#eb6834" font-family="'IBM Plex Mono','SFMono-Regular',Menlo,Consolas,monospace">vx_std, wz_std</text>
+<rect x="436" y="30" width="194" height="88" rx="10" fill="#ffffff" stroke="#c8ced8" stroke-width="1.2"/>
+<text x="450" y="56" font-size="14" fill="#1f2733" font-weight="700" text-anchor="start">③ ロールアウト</text>
+<text x="450" y="80" font-size="12.5" fill="#586273" text-anchor="start">モデルで軌道を予測</text>
+<text x="450" y="104" font-size="12" fill="#eb6834" font-family="'IBM Plex Mono','SFMono-Regular',Menlo,Consolas,monospace">time_steps, motion_model</text>
+<rect x="646" y="30" width="194" height="88" rx="10" fill="#ffffff" stroke="#c8ced8" stroke-width="1.2"/>
+<text x="660" y="56" font-size="14" fill="#1f2733" font-weight="700" text-anchor="start">④ コストを計算</text>
+<text x="660" y="80" font-size="12.5" fill="#586273" text-anchor="start">critic の値を足し合わせる</text>
+<text x="660" y="104" font-size="12" fill="#eb6834" font-family="'IBM Plex Mono','SFMono-Regular',Menlo,Consolas,monospace">critics, cost_weight</text>
+<rect x="646" y="168" width="194" height="88" rx="10" fill="#ffffff" stroke="#c8ced8" stroke-width="1.2"/>
+<text x="660" y="194" font-size="14" fill="#1f2733" font-weight="700" text-anchor="start">⑤ 重みつき平均</text>
+<text x="660" y="218" font-size="12.5" fill="#586273" text-anchor="start">低コストの候補ほど重く平均</text>
+<text x="660" y="242" font-size="12" fill="#eb6834" font-family="'IBM Plex Mono','SFMono-Regular',Menlo,Consolas,monospace">temperature, gamma</text>
+<rect x="436" y="168" width="194" height="88" rx="10" fill="#ffffff" stroke="#c8ced8" stroke-width="1.2"/>
+<text x="450" y="194" font-size="14" fill="#1f2733" font-weight="700" text-anchor="start">⑥ 平滑化</text>
+<text x="450" y="218" font-size="12.5" fill="#586273" text-anchor="start">制御列をなめらかにする</text>
+<text x="450" y="242" font-size="12" fill="#eb6834" font-family="'IBM Plex Mono','SFMono-Regular',Menlo,Consolas,monospace">Savitzky–Golay</text>
+<rect x="226" y="168" width="194" height="88" rx="10" fill="#ffffff" stroke="#c8ced8" stroke-width="1.2"/>
+<text x="240" y="194" font-size="14" fill="#1f2733" font-weight="700" text-anchor="start">⑦ 指令を送る</text>
+<text x="240" y="218" font-size="12.5" fill="#586273" text-anchor="start">最初の速度指令を出す</text>
+<text x="240" y="242" font-size="12" fill="#eb6834" font-family="'IBM Plex Mono','SFMono-Regular',Menlo,Consolas,monospace">cmd_vel</text>
+<line x1="212" y1="74" x2="223" y2="74" stroke="#8a93a3" stroke-width="1.6" marker-end="url(#ah-muted)"/>
+<line x1="422" y1="74" x2="433" y2="74" stroke="#8a93a3" stroke-width="1.6" marker-end="url(#ah-muted)"/>
+<line x1="632" y1="74" x2="643" y2="74" stroke="#8a93a3" stroke-width="1.6" marker-end="url(#ah-muted)"/>
+<line x1="743" y1="120" x2="743" y2="165" stroke="#8a93a3" stroke-width="1.6" marker-end="url(#ah-muted)"/>
+<line x1="644" y1="212" x2="633" y2="212" stroke="#8a93a3" stroke-width="1.6" marker-end="url(#ah-muted)"/>
+<line x1="434" y1="212" x2="423" y2="212" stroke="#8a93a3" stroke-width="1.6" marker-end="url(#ah-muted)"/>
+<path d="M 224 212.0 H 112 V 121" fill="none" stroke="#8a93a3" stroke-width="1.6" marker-end="url(#ah-muted)"/>
+<text x="122" y="147" font-size="11.5" fill="#586273" text-anchor="start">次の周期へ (model_dt 秒ごと)</text>
+<text x="733" y="147" font-size="11.5" fill="#586273" text-anchor="end">②〜⑤ を iteration_count 回 (既定 1 回)</text>
+</svg>

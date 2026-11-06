@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 282" width="860" height="282" font-family="'Noto Sans JP','Noto Sans CJK JP','Hiragino Sans','Yu Gothic','Meiryo',sans-serif" role="img" aria-label="MPPI の 1 周期。ゆらぎを足した入力列を試し、コストを計算し、コストが低いものほど重くして平均し、最初の 1 手を実行する">
+<title>MPPI の 1 周期。ゆらぎを足した入力列を試し、コストを計算し、コストが低いものほど重くして平均し、最初の 1 手を実行する</title>
+<defs>
+<marker id="ah-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f2733"/></marker>
+<marker id="ah-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker>
+<marker id="ah-mpc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2a78d6"/></marker>
+<marker id="ah-mppi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#eb6834"/></marker>
+<marker id="ah-opt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6250d6"/></marker>
+</defs>
+<rect width="860" height="282" fill="#ffffff"/>
+<rect x="12" y="50" width="200" height="186" rx="10" fill="#fafbfc" stroke="#c8ced8" stroke-width="1.2"/>
+<text x="112" y="24" font-size="14" fill="#1f2733" font-weight="700" text-anchor="middle">① 試す</text>
+<text x="112" y="42" font-size="11.5" fill="#586273" text-anchor="middle">ゆらぎを足した K 本をロールアウト</text>
+<circle cx="130" cy="116.3" r="15" fill="#c3c9d3" stroke="none" stroke-width="1.5"/>
+<path d="M 34 146 Q 104 146 172 72" fill="none" stroke="#8a93a3" stroke-width="1.3"/>
+<path d="M 34 146 Q 104 146 172 96" fill="none" stroke="#8a93a3" stroke-width="1.3"/>
+<path d="M 34 146 Q 104 146 172 120" fill="none" stroke="#8a93a3" stroke-width="1.3"/>
+<path d="M 34 146 Q 104 146 172 146" fill="none" stroke="#8a93a3" stroke-width="1.3"/>
+<path d="M 34 146 Q 104 146 172 166" fill="none" stroke="#8a93a3" stroke-width="1.3"/>
+<path d="M 34 146 Q 104 146 172 184" fill="none" stroke="#8a93a3" stroke-width="1.3"/>
+<path d="M 34 146 Q 104 146 172 200" fill="none" stroke="#8a93a3" stroke-width="1.3"/>
+<line x1="34" y1="146" x2="180" y2="146" stroke="#1f2733" stroke-width="1.8" stroke-dasharray="5 4"/>
+<text x="112" y="226" font-size="11.5" fill="#586273" text-anchor="middle">点線：今の案（ゆらぎなし）</text>
+<circle cx="34" cy="146" r="5" fill="#1f2733" stroke="none" stroke-width="1.5"/>
+<rect x="224" y="50" width="200" height="186" rx="10" fill="#fafbfc" stroke="#c8ced8" stroke-width="1.2"/>
+<text x="324" y="24" font-size="14" fill="#1f2733" font-weight="700" text-anchor="middle">② 評価する</text>
+<text x="324" y="42" font-size="11.5" fill="#586273" text-anchor="middle">それぞれのコスト S<tspan dy="3" font-size="9">k</tspan><tspan dy="-3"> を計算</tspan></text>
+<circle cx="342" cy="116.3" r="15" fill="#c3c9d3" stroke="none" stroke-width="1.5"/>
+<path d="M 246 146 Q 316 146 384 72" fill="none" stroke="#8a93a3" stroke-width="1.0" opacity="0.40"/>
+<text x="390" y="76" font-size="11" fill="#586273" text-anchor="start">42</text>
+<path d="M 246 146 Q 316 146 384 96" fill="none" stroke="#8a93a3" stroke-width="1.4277777777777778" opacity="0.58"/>
+<text x="390" y="100" font-size="11" fill="#586273" text-anchor="start">31</text>
+<path d="M 246 146 Q 316 146 384 120" fill="none" stroke="#eb6834" stroke-width="2.283333333333333" opacity="0.95"/>
+<text x="390" y="124" font-size="11" fill="#eb6834" text-anchor="start">9</text>
+<path d="M 246 146 Q 316 146 384 146" fill="none" stroke="#eb6834" stroke-width="2.4" opacity="1.00"/>
+<text x="390" y="150" font-size="11" fill="#eb6834" font-weight="700" text-anchor="start">6</text>
+<path d="M 246 146 Q 316 146 384 166" fill="none" stroke="#eb6834" stroke-width="2.322222222222222" opacity="0.97"/>
+<text x="390" y="170" font-size="11" fill="#eb6834" text-anchor="start">8</text>
+<path d="M 246 146 Q 316 146 384 184" fill="none" stroke="#eb6834" stroke-width="2.0888888888888886" opacity="0.87"/>
+<text x="390" y="188" font-size="11" fill="#eb6834" text-anchor="start">14</text>
+<path d="M 246 146 Q 316 146 384 200" fill="none" stroke="#8a93a3" stroke-width="1.738888888888889" opacity="0.72"/>
+<text x="390" y="204" font-size="11" fill="#586273" text-anchor="start">23</text>
+<text x="324" y="226" font-size="11.5" fill="#586273" text-anchor="middle">障害物を通るとコストが大きい</text>
+<circle cx="246" cy="146" r="5" fill="#1f2733" stroke="none" stroke-width="1.5"/>
+<rect x="436" y="50" width="200" height="186" rx="10" fill="#fafbfc" stroke="#c8ced8" stroke-width="1.2"/>
+<text x="536" y="24" font-size="14" fill="#1f2733" font-weight="700" text-anchor="middle">③ 重みをつける</text>
+<text x="536" y="42" font-size="11.5" fill="#586273" text-anchor="middle">w<tspan dy="3" font-size="9">k</tspan><tspan dy="-3"> ∝ exp(−(S</tspan><tspan dy="3" font-size="9">k</tspan><tspan dy="-3"> − S</tspan><tspan dy="3" font-size="9">min</tspan><tspan dy="-3">) / λ)</tspan></text>
+<rect x="458" y="210" width="16" height="1.2" fill="#eb6834" opacity="0.25"/>
+<text x="466" y="226" font-size="11" fill="#586273" text-anchor="middle">42</text>
+<rect x="482" y="210" width="16" height="1.2" fill="#eb6834" opacity="0.25"/>
+<text x="490" y="226" font-size="11" fill="#586273" text-anchor="middle">31</text>
+<rect x="506" y="161.4" width="16" height="48.6" fill="#eb6834" opacity="0.53"/>
+<text x="514" y="226" font-size="11" fill="#586273" text-anchor="middle">9</text>
+<rect x="530" y="78" width="16" height="132" fill="#eb6834" opacity="1.00"/>
+<text x="538" y="226" font-size="11" fill="#586273" text-anchor="middle">6</text>
+<rect x="554" y="142.2" width="16" height="67.8" fill="#eb6834" opacity="0.64"/>
+<text x="562" y="226" font-size="11" fill="#586273" text-anchor="middle">8</text>
+<rect x="578" y="200.8" width="16" height="9.2" fill="#eb6834" opacity="0.30"/>
+<text x="586" y="226" font-size="11" fill="#586273" text-anchor="middle">14</text>
+<rect x="602" y="209.5" width="16" height="1.2" fill="#eb6834" opacity="0.25"/>
+<text x="610" y="226" font-size="11" fill="#586273" text-anchor="middle">23</text>
+<line x1="452" y1="210" x2="624" y2="210" stroke="#1f2733" stroke-width="1"/>
+<text x="454" y="70" font-size="11" fill="#586273" text-anchor="start">重み</text>
+<text x="622" y="70" font-size="11" fill="#eb6834" text-anchor="end">S が小さいほど重い</text>
+<rect x="648" y="50" width="200" height="186" rx="10" fill="#fafbfc" stroke="#c8ced8" stroke-width="1.2"/>
+<text x="748" y="24" font-size="14" fill="#1f2733" font-weight="700" text-anchor="middle">④ 平均する</text>
+<text x="748" y="42" font-size="11.5" fill="#586273" text-anchor="middle">重みつき平均で案を更新</text>
+<circle cx="766" cy="116.3" r="15" fill="#c3c9d3" stroke="none" stroke-width="1.5"/>
+<path d="M 670 146 Q 740 146 808 72" fill="none" stroke="#eb6834" stroke-width="1.0" opacity="0.15"/>
+<path d="M 670 146 Q 740 146 808 96" fill="none" stroke="#eb6834" stroke-width="1.0" opacity="0.15"/>
+<path d="M 670 146 Q 740 146 808 120" fill="none" stroke="#eb6834" stroke-width="1.0" opacity="0.37"/>
+<path d="M 670 146 Q 740 146 808 146" fill="none" stroke="#eb6834" stroke-width="1.0" opacity="0.75"/>
+<path d="M 670 146 Q 740 146 808 166" fill="none" stroke="#eb6834" stroke-width="1.0" opacity="0.46"/>
+<path d="M 670 146 Q 740 146 808 184" fill="none" stroke="#eb6834" stroke-width="1.0" opacity="0.19"/>
+<path d="M 670 146 Q 740 146 808 200" fill="none" stroke="#eb6834" stroke-width="1.0" opacity="0.15"/>
+<path d="M 670 146 Q 740 146 808 147.80005457336935" fill="none" stroke="#1f2733" stroke-width="3"/>
+<text x="748" y="226" font-size="11.5" fill="#1f2733" font-weight="700" text-anchor="middle">太線：新しい案</text>
+<circle cx="670" cy="146" r="5" fill="#1f2733" stroke="none" stroke-width="1.5"/>
+<line x1="213" y1="143" x2="223" y2="143" stroke="#8a93a3" stroke-width="1.4" marker-end="url(#ah-muted)"/>
+<line x1="425" y1="143" x2="435" y2="143" stroke="#8a93a3" stroke-width="1.4" marker-end="url(#ah-muted)"/>
+<line x1="637" y1="143" x2="647" y2="143" stroke="#8a93a3" stroke-width="1.4" marker-end="url(#ah-muted)"/>
+<text x="430" y="266" font-size="13" fill="#1f2733" text-anchor="middle">→ 最初の 1 手だけ実行し、案を 1 つずらして次の周期へ（01 章と同じ）</text>
+</svg>

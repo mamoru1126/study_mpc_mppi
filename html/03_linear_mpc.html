@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>線形 MPC | MPC × MPPI 学習ノート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/katex/katex.css">
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/auto-render.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 Q 12 12 20 4" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 Q 12 12 20 20" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 H 20" fill="none" stroke="var(--mpc)" stroke-width="2.4" stroke-linecap="round"/><circle cx="5" cy="12" r="3" fill="var(--ink)"/></svg><span>MPC × MPPI 学習ノート</span></a>
+  <button class="menu-btn" type="button" aria-expanded="false" aria-label="目次を開く">目次</button>
+</header>
+<div class="layout">
+<nav class="rail" aria-label="章の一覧"><h2>目次</h2><ul class="toc"><li><a href="index.html"><span class="num">◆</span><span>はじめに</span><span></span></a></li><li><a href="00_roadmap.html"><span class="num">00</span><span>学習ロードマップ</span><span class="done" data-done-slug="00_roadmap" title="読了"></span></a></li><li><a href="01_optimal_control.html"><span class="num">01</span><span>最適制御問題と receding horizon</span><span class="done" data-done-slug="01_optimal_control" title="読了"></span></a></li><li><a href="02_least_squares_gauss_newton.html"><span class="num">02</span><span>最小二乗とガウス・ニュートン法</span><span class="done" data-done-slug="02_least_squares_gauss_newton" title="読了"></span></a></li><li><a href="03_linear_mpc.html" aria-current="page"><span class="num">03</span><span>線形 MPC</span><span class="done" data-done-slug="03_linear_mpc" title="読了"></span></a></li><li><a href="04_nonlinear_mpc.html"><span class="num">04</span><span>非線形 MPC</span><span class="done" data-done-slug="04_nonlinear_mpc" title="読了"></span></a></li><li><a href="05_mppi_basics.html"><span class="num">05</span><span>MPPI の考え方</span><span class="done" data-done-slug="05_mppi_basics" title="読了"></span></a></li><li><a href="06_mppi_theory.html"><span class="num">06</span><span>MPPI の理論</span><span class="done" data-done-slug="06_mppi_theory" title="読了"></span></a></li><li><a href="07_comparison.html"><span class="num">07</span><span>MPC と MPPI の比較</span><span class="done" data-done-slug="07_comparison" title="読了"></span></a></li><li><a href="08_nav2_mppi.html"><span class="num">08</span><span>Nav2 の MPPI</span><span class="done" data-done-slug="08_nav2_mppi" title="読了"></span></a></li><li><a href="09_glossary.html"><span class="num">09</span><span>用語集</span><span class="done" data-done-slug="09_glossary" title="読了"></span></a></li></ul><h2>リンク</h2><p class="rail-note"><a href="https://github.com/mamoru1126/study_mpc_mppi" target="_blank" rel="noopener">このリポジトリ</a><br><a href="https://docs.nav2.org/configuration/packages/configuring-mppic.html" target="_blank" rel="noopener">Nav2 の MPPI の設定ガイド</a><br><a href="https://homes.cs.washington.edu/~bboots/files/InformationTheoreticMPC.pdf" target="_blank" rel="noopener">MPPI の論文 (Williams et al. 2017)</a></p><p class="rail-note">各章の最後で「この章を読んだ」にチェックすると、ここに印が付きます (このブラウザにだけ保存)。</p></nav>
+<main>
+<article class="article">
+<div class="chapter-meta"><span class="chip time">第 03 章</span><span class="chip mpc">MPC</span><span class="chip time">目安 1.5 時間</span></div>
+<h1 id="03-線形-mpc-コストを-2-次関数に直すqp">03. 線形 MPC (コストを 2 次関数に直す、QP)</h1>
+<h2 id="この章のゴール">この章のゴール</h2>
+<ul>
+<li>線形モデルの MPC で、未来の状態を入力の列の 1 次式 <span class="arithmatex">\(X = \Phi x_0 + \Gamma U\)</span> で書ける</li>
+<li>コストが入力の列の 2 次関数 <span class="arithmatex">\(J(U) = U^\top H U + 2 x_0^\top F^\top U + \text{定数}\)</span> になることが分かり、制約がないときの答え <span class="arithmatex">\(U^* = -H^{-1} F x_0\)</span> を求められる</li>
+<li>制約があると QP (2 次計画問題) になること、「制約なしの答えを切る」のとの違いが分かる</li>
+</ul>
+<blockquote>
+<p><strong>つながり</strong>
+<a href="02_least_squares_gauss_newton.html">02 章</a> で「残差が変数の 1 次式なら、一発で解ける」と見ました。線形 MPC はまさにその場合です。<a href="04_nonlinear_mpc.html">04 章</a> の非線形 MPC は、毎回この章の形に近似して解きます。</p>
+</blockquote>
+<hr />
+<h2 id="0-この章で使う記号">0. この章で使う記号</h2>
+<table>
+<thead>
+<tr>
+<th>記号</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(A\)</span>, <span class="arithmatex">\(B\)</span></td>
+<td>線形モデル <span class="arithmatex">\(x_{t+1} = A x_t + B u_t\)</span> の行列</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(Q\)</span>, <span class="arithmatex">\(R\)</span>, <span class="arithmatex">\(P\)</span></td>
+<td>状態・入力・最後の状態の重み行列 (対称で、<span class="arithmatex">\(Q, P\)</span> は半正定値、<span class="arithmatex">\(R\)</span> は正定値)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(X\)</span>, <span class="arithmatex">\(U\)</span></td>
+<td>状態の列 <span class="arithmatex">\((x_1, \dots, x_N)\)</span> と入力の列 <span class="arithmatex">\((u_0, \dots, u_{N-1})\)</span> を縦に並べたもの</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\Phi\)</span>, <span class="arithmatex">\(\Gamma\)</span></td>
+<td><span class="arithmatex">\(X = \Phi x_0 + \Gamma U\)</span> と書いたときの行列</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\bar Q\)</span>, <span class="arithmatex">\(\bar R\)</span></td>
+<td><span class="arithmatex">\(Q\)</span> (最後だけ <span class="arithmatex">\(P\)</span>) と <span class="arithmatex">\(R\)</span> を対角に並べた大きな行列</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(H\)</span>, <span class="arithmatex">\(F\)</span></td>
+<td>コストを <span class="arithmatex">\(U\)</span> の 2 次関数で書いたときの行列</td>
+</tr>
+</tbody>
+</table>
+<h2 id="1-線形モデルと-2-次コスト">1. 線形モデルと 2 次コスト</h2>
+<p>モデルが線形で、コストが 2 次式の場合を考えます。目標は状態を 0 にすることとします (目標が 0 でなければ、<span class="arithmatex">\(x\)</span> を「目標とのずれ」と読み替えます)。</p>
+<div class="arithmatex">\[
+\begin{gathered}
+x_{t+1} = A x_t + B u_t \\
+J = \sum_{t=0}^{N-1} \bigl( x_t^\top Q x_t + u_t^\top R u_t \bigr) + x_N^\top P x_N
+\end{gathered}
+\]</div>
+<p>例として、まっすぐなレールの上の台車を考えます。状態は位置 <span class="arithmatex">\(p\)</span> と速度 <span class="arithmatex">\(v\)</span>、入力は加速度 <span class="arithmatex">\(a\)</span> です。</p>
+<div class="arithmatex">\[
+\begin{bmatrix} p_{t+1} \\ v_{t+1} \end{bmatrix}
+=
+\underbrace{\begin{bmatrix} 1 & \Delta t \\ 0 & 1 \end{bmatrix}}_{A}
+\begin{bmatrix} p_t \\ v_t \end{bmatrix}
++
+\underbrace{\begin{bmatrix} \Delta t^2 / 2 \\ \Delta t \end{bmatrix}}_{B}
+a_t
+\]</div>
+<p><a href="01_optimal_control.html">01 章</a> の 2 輪ロボットは <span class="arithmatex">\(\cos\theta\)</span> や <span class="arithmatex">\(\sin\theta\)</span> を含むので線形ではありません。その場合は 04 章で扱います。</p>
+<h2 id="2-未来の状態を入力の列で書く">2. 未来の状態を入力の列で書く</h2>
+<p>モデルを順に代入していきます。</p>
+<div class="arithmatex">\[
+\begin{aligned}
+x_1 &= A x_0 + B u_0 \\
+x_2 &= A x_1 + B u_1 = A^2 x_0 + AB\, u_0 + B u_1 \\
+x_3 &= A x_2 + B u_2 = A^3 x_0 + A^2 B\, u_0 + AB\, u_1 + B u_2
+\end{aligned}
+\]</div>
+<p>縦に並べると、未来の状態は入力の列の 1 次式になります (<span class="arithmatex">\(N = 3\)</span> の場合)。</p>
+<div class="arithmatex">\[
+\underbrace{\begin{bmatrix} x_1 \\ x_2 \\ x_3 \end{bmatrix}}_{X}
+=
+\underbrace{\begin{bmatrix} A \\ A^2 \\ A^3 \end{bmatrix}}_{\Phi} x_0
++
+\underbrace{\begin{bmatrix} B & 0 & 0 \\ AB & B & 0 \\ A^2 B & AB & B \end{bmatrix}}_{\Gamma}
+\underbrace{\begin{bmatrix} u_0 \\ u_1 \\ u_2 \end{bmatrix}}_{U}
+\]</div>
+<p><span class="arithmatex">\(\Gamma\)</span> が下三角なのは、<strong>後の入力は前の状態に影響しない</strong> からです (<span class="arithmatex">\(u_2\)</span> は <span class="arithmatex">\(x_1\)</span> や <span class="arithmatex">\(x_2\)</span> を変えられない)。<span class="arithmatex">\(\Gamma\)</span> の <span class="arithmatex">\((t, s)\)</span> ブロック <span class="arithmatex">\(A^{t-s} B\)</span> は「入力 <span class="arithmatex">\(u_s\)</span> を少し変えると、後の状態 <span class="arithmatex">\(x_{t+1}\)</span> がどれだけ変わるか」(感度) です。04 章では、これを非線形モデルに広げます。</p>
+<h2 id="3-コストを-u-の-2-次関数にする">3. コストを <span class="arithmatex">\(U\)</span> の 2 次関数にする</h2>
+<p>コストを行列で書くと <span class="arithmatex">\(J = x_0^\top Q x_0 + X^\top \bar Q X + U^\top \bar R U\)</span> です (<span class="arithmatex">\(\bar Q = \operatorname{diag}(Q, \dots, Q, P)\)</span>、<span class="arithmatex">\(\bar R = \operatorname{diag}(R, \dots, R)\)</span>)。ここに <span class="arithmatex">\(X = \Phi x_0 + \Gamma U\)</span> を代入して整理すると</p>
+<div class="arithmatex">\[
+\begin{gathered}
+J(U) = U^\top H U + 2\, x_0^\top F^\top U + \text{定数} \qquad (1) \\
+H = \Gamma^\top \bar Q\, \Gamma + \bar R, \quad F = \Gamma^\top \bar Q\, \Phi
+\end{gathered}
+\]</div>
+<p>と、<span class="arithmatex">\(U\)</span> の 2 次関数になります。<span class="arithmatex">\(R\)</span> が正定値なら <span class="arithmatex">\(H\)</span> も正定値なので、最小点はただ 1 つで、勾配を 0 とおけば求まります。</p>
+<div class="arithmatex">\[
+\begin{gathered}
+\nabla J = 2HU + 2F x_0 = 0 \\
+\Longrightarrow \quad U^* = -H^{-1} F x_0 \qquad (2)
+\end{gathered}
+\]</div>
+<p><a href="02_least_squares_gauss_newton.html">02 章</a> の言葉で言えば、残差 <span class="arithmatex">\(r(U) = \begin{bmatrix} \bar Q^{1/2} (\Phi x_0 + \Gamma U) \\ \bar R^{1/2} U \end{bmatrix}\)</span> が <span class="arithmatex">\(U\)</span> の 1 次式なので、ガウス・ニュートン法が 1 回で答えに着く場合です (<span class="arithmatex">\(J^\top J = H\)</span> になります)。</p>
+<h3 id="31-手計算できる例">3.1 手計算できる例</h3>
+<p>1 次元のモデル <span class="arithmatex">\(x_{t+1} = x_t + u_t\)</span> (<span class="arithmatex">\(A = B = 1\)</span>)、<span class="arithmatex">\(N = 2\)</span>、<span class="arithmatex">\(Q = R = P = 1\)</span> で計算してみます。</p>
+<div class="arithmatex">\[
+\begin{gathered}
+x_1 = x_0 + u_0, \quad x_2 = x_0 + u_0 + u_1 \\
+\Longrightarrow \quad
+\Phi = \begin{bmatrix} 1 \\ 1 \end{bmatrix}, \quad
+\Gamma = \begin{bmatrix} 1 & 0 \\ 1 & 1 \end{bmatrix}
+\end{gathered}
+\]</div>
+<div class="arithmatex">\[
+\begin{aligned}
+H &= \Gamma^\top \Gamma + I = \begin{bmatrix} 3 & 1 \\ 1 & 2 \end{bmatrix}, \quad
+F = \Gamma^\top \Phi = \begin{bmatrix} 2 \\ 1 \end{bmatrix} \\[4pt]
+U^* &= -H^{-1} F x_0 = -\frac15 \begin{bmatrix} 2 & -1 \\ -1 & 3 \end{bmatrix} \begin{bmatrix} 2 \\ 1 \end{bmatrix} x_0 \\
+&= -\begin{bmatrix} 0.6 \\ 0.2 \end{bmatrix} x_0
+\end{aligned}
+\]</div>
+<p><span class="arithmatex">\(x_0 = 1\)</span> なら <span class="arithmatex">\(u_0 = -0.6\)</span>、<span class="arithmatex">\(u_1 = -0.2\)</span> で、<span class="arithmatex">\(x_1 = 0.4\)</span>、<span class="arithmatex">\(x_2 = 0.2\)</span>、コストは <span class="arithmatex">\(J = 1 + 0.36 + 0.16 + 0.04 + 0.04 = 1.6\)</span> です (最初の 1 は <span class="arithmatex">\(x_0^2\)</span> で、<span class="arithmatex">\(U\)</span> によらない定数)。試しに <span class="arithmatex">\(U = (-0.5, -0.25)\)</span> にすると <span class="arithmatex">\(J = 1.625\)</span> で、確かに少し大きくなります。</p>
+<h3 id="32-receding-horizon-にすると線形フィードバックになる">3.2 receding horizon にすると線形フィードバックになる</h3>
+<p>毎周期 <span class="arithmatex">\(u_0^* = -0.6\, x_0\)</span> だけを実行すると、制御則は <span class="arithmatex">\(u = -Kx\)</span> (<span class="arithmatex">\(K = 0.6\)</span>) という <strong>状態の定数倍のフィードバック</strong> になります。閉ループは <span class="arithmatex">\(x_{t+1} = x_t - 0.6\,x_t = 0.4\,x_t\)</span> なので、状態は毎周期 0.4 倍になって 0 に近づきます。</p>
+<p>一般に、<strong>制約のない線形 MPC は、式 (2) の最初の行を取り出した <span class="arithmatex">\(u = -Kx\)</span> という線形フィードバックと同じ</strong> です。<span class="arithmatex">\(K\)</span> は <span class="arithmatex">\(H\)</span> と <span class="arithmatex">\(F\)</span> から決まる定数なので、前もって計算しておけます。演習 3 の台車では <span class="arithmatex">\(K = (17.05,\ 7.95)\)</span> で、「位置が 1 m ずれていたら <span class="arithmatex">\(-17\)</span> m/s² の加速度」という意味になります。(ホライズンを無限に長くすると、LQR と呼ばれる最適なフィードバックに一致します。)</p>
+<h2 id="4-制約があると-qp-になる">4. 制約があると QP になる</h2>
+<p>実際の入力には上下限があります。入力の上下限や状態の制約は、どれも <span class="arithmatex">\(U\)</span> の 1 次の不等式で書けます (状態は <span class="arithmatex">\(X = \Phi x_0 + \Gamma U\)</span> なので)。</p>
+<div class="arithmatex">\[
+\min_{U}\ U^\top H U + 2\, x_0^\top F^\top U
+\qquad \text{s.t.} \quad G U \le w + E x_0
+\]</div>
+<p>2 次関数を 1 次の不等式のもとで最小化する問題を <strong>2 次計画問題 (QP)</strong> と呼びます。<span class="arithmatex">\(H\)</span> が正定値なら凸な QP なので、答えはただ 1 つで、専用のソルバーで速く確実に解けます。ただし、答えはもう <span class="arithmatex">\(x_0\)</span> の 1 次式 <span class="arithmatex">\(-H^{-1} F x_0\)</span> ではありません (どの制約がぎりぎりで効いているかによって、場合分けされた 1 次式になります)。</p>
+<h3 id="41-制約なしの答えを切るではだめな理由">4.1 「制約なしの答えを切る」ではだめな理由</h3>
+<p>演習 3 で、台車を位置 1 m から 0 へ止めます。<span class="arithmatex">\(\Delta t = 0.1\)</span> 秒、<span class="arithmatex">\(N = 20\)</span> (2 秒先まで)、加速度の上限は <span class="arithmatex">\(|a| \le 0.5\)</span> m/s² です。</p>
+<ul>
+<li><strong>制約なし</strong>: 最初の入力は <span class="arithmatex">\(-17.05\)</span> m/s²。上限の 34 倍で、実行できない</li>
+<li><strong>(a) 制約なしの答えを上限で切る</strong>: 毎周期、式 (2) の <span class="arithmatex">\(u_0\)</span> を <span class="arithmatex">\(\pm 0.5\)</span> に切って実行する</li>
+<li><strong>(b) QP</strong>: 上限を制約にした QP を毎周期解く</li>
+</ul>
+<p><img alt="演習 3: 上限で切るか、QP を解くか" src="figures/ex03_linear_mpc.png" /></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>減速を始める時刻</th>
+<th>最高速度</th>
+<th>行き過ぎ (位置の最小値)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>(a) 切る</td>
+<td>1.6 秒</td>
+<td>0.80 m/s</td>
+<td>−0.324 m</td>
+</tr>
+<tr>
+<td>(b) QP</td>
+<td>1.4 秒</td>
+<td>0.70 m/s</td>
+<td>−0.021 m</td>
+</tr>
+</tbody>
+</table>
+<p>(a) は「最後に強くブレーキをかければ止まれる」という前提の計画を、毎回切って実行しています。いざブレーキが必要になると 0.5 m/s² しか出せないので止まりきれず、0.32 m 行き過ぎます。(b) の QP は、ブレーキが 0.5 m/s² しか出せないことを知っているので、早めに減速を始めます。<strong>制約を知った上で計画する</strong> ことが、MPC が制約に強い理由です。</p>
+<h3 id="42-qp-の解き方-概要">4.2 QP の解き方 (概要)</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>考え方</th>
+<th>例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>能動集合法</td>
+<td>どの制約がぎりぎりで効くかを推定し、等式制約の問題を解いて推定を直す。前回の答えから始めると速い</td>
+<td>qpOASES</td>
+</tr>
+<tr>
+<td>内点法</td>
+<td>制約の内側から、境界に近づくほど大きくなる罰を少しずつ弱めながら解く</td>
+<td>HPIPM</td>
+</tr>
+<tr>
+<td>1 次の方法</td>
+<td>勾配と射影のくり返し (ADMM など)。1 回が軽い</td>
+<td>OSQP</td>
+</tr>
+</tbody>
+</table>
+<p>この章の式 (1) は状態を消去して <span class="arithmatex">\(U\)</span> だけの問題にしています (condensing)。状態も変数として残すと、行列が時刻ごとのブロックが並んだ疎な形になり、HPIPM のような専用ソルバーはホライズン長 <span class="arithmatex">\(N\)</span> に比例する時間で解けます。演習 3 では簡単のため、上下限つきの最適化ができる scipy の L-BFGS-B を使っています。</p>
+<h2 id="5-調整のつまみ">5. 調整のつまみ</h2>
+<ul>
+<li><strong><span class="arithmatex">\(Q\)</span> を大きく</strong>すると目標に強く追従し、<strong><span class="arithmatex">\(R\)</span> を大きく</strong>すると入力がおだやかになる。効くのは比だけで、<span class="arithmatex">\(Q\)</span> と <span class="arithmatex">\(R\)</span> を両方 10 倍しても答えは変わらない</li>
+<li><strong><span class="arithmatex">\(N\)</span> を長く</strong>すると先を見越した動きになるが、計算が増える</li>
+<li><strong>終端の重み <span class="arithmatex">\(P\)</span></strong> を適切に選ぶ (例えば LQR のリッカチ方程式の解にする) と、短いホライズンでも安定性を保証できる</li>
+</ul>
+<h2 id="演習-3">演習 3</h2>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>exercises/ex03_linear_mpc.py
+</code></pre></div>
+<p>3.1 節の <span class="arithmatex">\(H\)</span>、<span class="arithmatex">\(F\)</span>、<span class="arithmatex">\(U^*\)</span> を確かめ、台車の 3 つの制御を比べた図を作ります。</p>
+<p>試してみること:</p>
+<ul>
+<li>加速度の上限 <code>amax</code> を 1.0 や 0.3 にすると、(a) と (b) の差はどう変わるか</li>
+<li><code>R</code> を <code>0.01</code> にすると、制約なしの答えの大きさ (<span class="arithmatex">\(K\)</span>) はどう変わるか</li>
+</ul>
+<h2 id="理解度チェック">理解度チェック</h2>
+<ol>
+<li><span class="arithmatex">\(\Gamma\)</span> が下三角になるのはなぜか?</li>
+<li>制約のない線形 MPC の答えが <span class="arithmatex">\(x_0\)</span> の 1 次式になるのはなぜか?</li>
+<li><span class="arithmatex">\(Q\)</span> と <span class="arithmatex">\(R\)</span> を両方 10 倍すると、答え <span class="arithmatex">\(U^*\)</span> はどうなるか?</li>
+<li>制約のある線形 MPC は、どんな最適化問題になるか。なぜ確実に解けるのか?</li>
+<li>制約なしの答えを上下限で切って実行すると、何が困るか?</li>
+<li>3.1 節の例で <span class="arithmatex">\(N = 1\)</span> にすると (<span class="arithmatex">\(J = x_0^2 + u_0^2 + x_1^2\)</span>)、<span class="arithmatex">\(u_0^*\)</span> はいくつか?</li>
+</ol>
+<details>
+<summary>答えの例</summary>
+<ol>
+<li>後の入力は前の状態に影響しない (因果性) ので、<span class="arithmatex">\(x_{t+1}\)</span> は <span class="arithmatex">\(u_0, \dots, u_t\)</span> だけに依存し、<span class="arithmatex">\(u_{t+1}\)</span> 以降の係数は 0 になるから。</li>
+<li>コストが <span class="arithmatex">\(U\)</span> の 2 次関数で、勾配 <span class="arithmatex">\(2HU + 2Fx_0\)</span> が <span class="arithmatex">\(U\)</span> と <span class="arithmatex">\(x_0\)</span> の 1 次式なので、勾配 = 0 の答えも <span class="arithmatex">\(x_0\)</span> の 1 次式になるから。</li>
+<li>変わらない。<span class="arithmatex">\(H\)</span> と <span class="arithmatex">\(F\)</span> が両方 10 倍になり、<span class="arithmatex">\(-H^{-1}F x_0\)</span> は同じ。</li>
+<li>凸な 2 次計画問題 (QP)。<span class="arithmatex">\(H\)</span> が正定値なので、局所解がそのまま唯一の最適解になり、能動集合法や内点法で確実に解ける。</li>
+<li>制約を知らずに立てた計画なので、ぎりぎりまで減速しないなど、切られた入力では計画どおりに動けない。演習 3 では止まりきれずに 0.32 m 行き過ぎた。</li>
+<li><span class="arithmatex">\(J = x_0^2 + u_0^2 + (x_0 + u_0)^2\)</span> を <span class="arithmatex">\(u_0\)</span> で微分して 0 とおくと <span class="arithmatex">\(2u_0 + 2(x_0 + u_0) = 0\)</span> なので、<span class="arithmatex">\(u_0^* = -x_0 / 2\)</span> (= −0.5 <span class="arithmatex">\(x_0\)</span>)。</li>
+</ol>
+</details>
+<h2 id="もっと知りたい人へ">もっと知りたい人へ</h2>
+<ul>
+<li>J. B. Rawlings, D. Q. Mayne, M. M. Diehl, <em>Model Predictive Control: Theory, Computation, and Design</em>, 2nd ed., 2017. 第 1〜2 章 (線形 MPC、安定性)、第 8 章 (数値解法)。</li>
+<li>F. Borrelli, A. Bemporad, M. Morari, <em>Predictive Control for Linear and Hybrid Systems</em>, Cambridge University Press, 2017. 制約つき線形 MPC と QP の解の構造。</li>
+</ul>
+<label class="read-toggle"><input type="checkbox" id="read-toggle" data-slug="03_linear_mpc"> この章を読んだ</label>
+<nav class="pager" aria-label="前後の章"><a class="prev" href="02_least_squares_gauss_newton.html"><small>前へ</small>02 最小二乗とガウス・ニュートン法</a><a class="next" href="04_nonlinear_mpc.html"><small>次へ</small>04 非線形 MPC</a></nav>
+</article>
+</main>
+</div>
+<script src="assets/app.js"></script>
+<script src="assets/ctrl.js"></script>
+<script src="assets/demos.js"></script>
+</body>
+</html>

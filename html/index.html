@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MPC × MPPI 学習ノート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/katex/katex.css">
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/auto-render.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 Q 12 12 20 4" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 Q 12 12 20 20" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 H 20" fill="none" stroke="var(--mpc)" stroke-width="2.4" stroke-linecap="round"/><circle cx="5" cy="12" r="3" fill="var(--ink)"/></svg><span>MPC × MPPI 学習ノート</span></a>
+  <button class="menu-btn" type="button" aria-expanded="false" aria-label="目次を開く">目次</button>
+</header>
+<div class="layout">
+<nav class="rail" aria-label="章の一覧"><h2>目次</h2><ul class="toc"><li><a href="index.html" aria-current="page"><span class="num">◆</span><span>はじめに</span><span></span></a></li><li><a href="00_roadmap.html"><span class="num">00</span><span>学習ロードマップ</span><span class="done" data-done-slug="00_roadmap" title="読了"></span></a></li><li><a href="01_optimal_control.html"><span class="num">01</span><span>最適制御問題と receding horizon</span><span class="done" data-done-slug="01_optimal_control" title="読了"></span></a></li><li><a href="02_least_squares_gauss_newton.html"><span class="num">02</span><span>最小二乗とガウス・ニュートン法</span><span class="done" data-done-slug="02_least_squares_gauss_newton" title="読了"></span></a></li><li><a href="03_linear_mpc.html"><span class="num">03</span><span>線形 MPC</span><span class="done" data-done-slug="03_linear_mpc" title="読了"></span></a></li><li><a href="04_nonlinear_mpc.html"><span class="num">04</span><span>非線形 MPC</span><span class="done" data-done-slug="04_nonlinear_mpc" title="読了"></span></a></li><li><a href="05_mppi_basics.html"><span class="num">05</span><span>MPPI の考え方</span><span class="done" data-done-slug="05_mppi_basics" title="読了"></span></a></li><li><a href="06_mppi_theory.html"><span class="num">06</span><span>MPPI の理論</span><span class="done" data-done-slug="06_mppi_theory" title="読了"></span></a></li><li><a href="07_comparison.html"><span class="num">07</span><span>MPC と MPPI の比較</span><span class="done" data-done-slug="07_comparison" title="読了"></span></a></li><li><a href="08_nav2_mppi.html"><span class="num">08</span><span>Nav2 の MPPI</span><span class="done" data-done-slug="08_nav2_mppi" title="読了"></span></a></li><li><a href="09_glossary.html"><span class="num">09</span><span>用語集</span><span class="done" data-done-slug="09_glossary" title="読了"></span></a></li></ul><h2>リンク</h2><p class="rail-note"><a href="https://github.com/mamoru1126/study_mpc_mppi" target="_blank" rel="noopener">このリポジトリ</a><br><a href="https://docs.nav2.org/configuration/packages/configuring-mppic.html" target="_blank" rel="noopener">Nav2 の MPPI の設定ガイド</a><br><a href="https://homes.cs.washington.edu/~bboots/files/InformationTheoreticMPC.pdf" target="_blank" rel="noopener">MPPI の論文 (Williams et al. 2017)</a></p><p class="rail-note">各章の最後で「この章を読んだ」にチェックすると、ここに印が付きます (このブラウザにだけ保存)。</p></nav>
+<main>
+<div class="article" style="max-width:none">
+<section class="hero">
+  <div>
+    <div class="eyebrow">モデル予測制御を数式から理解する学習ノート</div>
+    <h1>MPC と MPPI は、同じ問題の 2 つの解き方</h1>
+    <p>どちらも「少し先までの動きを予測し、コストがいちばん小さい入力の列を選び、最初の 1 手だけ実行する」をくり返します。違うのは、いちばん良い入力の列の探し方だけです。MPC は微分を使って直し、MPPI はたくさん試して平均します。</p>
+    <p>この教材では、共通の問題から始めて、ガウス・ニュートン法、線形・非線形 MPC、MPPI の重みとその理論、Nav2 のパラメータまでを順に積み上げます。各章に numpy だけで動く演習と、ブラウザで動かせるデモがあります。</p>
+    <div class="paper-card">
+      <div class="t">対象と前提</div>
+      <div class="a">大学 1〜2 年の微分と線形代数、確率の基本 (正規分布と期待値)。ROS や GPU は不要です。</div>
+      <div><a href="00_roadmap.html">ロードマップから始める</a> ・ <a href="07_comparison.html">先にデモを見る</a></div>
+    </div>
+  </div>
+  <div class="scan-hero">
+    <canvas id="hero-mppi" aria-label="MPPI のアニメーション。ロボットが 2 人をよけながらゴールへ向かう。オレンジの線が試しているサンプルで、濃いほど重みが大きい"></canvas>
+    <p>MPPI が 2 人をよけながら進む様子。オレンジの細い線が毎周期試している 300 本のサンプル (濃いほど重い)、黒い太線が重みつき平均で作った計画。</p>
+  </div>
+</section>
+
+<section class="section">
+  <h2>中心にある 1 つの問題</h2>
+  <p class="lead">制御の周期ごとに、今の状態から N ステップ先までの入力の列を選び、コストの合計を最小にします。</p>
+  <div class="arithmatex">\[
+\min_{u_0, \dots, u_{N-1}} \ \sum_{t=0}^{N-1} \ell(x_t, u_t) + \phi(x_N)
+\quad \text{s.t.} \quad x_{t+1} = f(x_t, u_t), \ \ x_0 = \hat x, \ \ u_{\min} \le u_t \le u_{\max}
+\]</div>
+  <div class="term-grid">
+    <div class="term" style="--c:var(--opt)"><b>モデルとコスト</b>次の状態を計算する式 f と、悪さを表す ℓ, φ。最初の 1 手だけ実行して毎周期解き直す。→ 01 章</div>
+    <div class="term" style="--c:var(--mpc)"><b>MPC: 微分で解く</b>残差の 2 乗和と見て、ガウス・ニュートン法や SQP で入力の列を直す。→ 02〜04 章</div>
+    <div class="term" style="--c:var(--mppi)"><b>MPPI: 試して解く</b>ゆらぎを足した列を K 本試し、重み e<sup>−S/λ</sup> で平均する。→ 05・06 章</div>
+    <div class="term" style="--c:var(--nav2)"><b>比べて使う</b>得意・苦手をデモで確かめ、Nav2 のパラメータに結びつける。→ 07・08 章</div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>進め方</h2>
+  <ol class="steps">
+    <li>00 章のロードマップで全体像をつかみ、01 章で「解きたい問題」を固める。</li>
+    <li>MPC の列 (02 → 03 → 04 章) を読み、演習で数値を確かめる。</li>
+    <li>MPPI の列 (05 → 06 章) を読む。06 章では 02 章の LM 法と同じ形の式が出てくる。</li>
+    <li>07 章のデモで 2 つを比べ、08 章で Nav2 の設定に結びつける。</li>
+  </ol>
+</section>
+
+<section class="section">
+  <h2>章の一覧</h2>
+  <p class="lead">色の印は、その章で主に扱うものです。MPC は青、MPPI はオレンジ、最適化は紫、Nav2 は緑。</p>
+  <div class="cards"><a class="card" href="00_roadmap.html"><span class="n"><span>CHAPTER 00</span><span class="done-badge" data-done-badge="00_roadmap" hidden>読了</span></span><span class="ttl">学習ロードマップ</span><span class="sum">MPC と MPPI をひとことで。共通の問題と、必要な知識の地図。</span><span class="chips"><span class="chip time">目安 15 分</span></span></a><a class="card" href="01_optimal_control.html"><span class="n"><span>CHAPTER 01</span><span class="done-badge" data-done-badge="01_optimal_control" hidden>読了</span></span><span class="ttl">最適制御問題と receding horizon</span><span class="sum">モデル・コスト・ホライズン。最初の 1 手だけ実行して、毎周期解き直す理由。</span><span class="chips"><span class="chip mpc">MPC</span><span class="chip mppi">MPPI</span><span class="chip time">目安 1 時間</span></span></a><a class="card" href="02_least_squares_gauss_newton.html"><span class="n"><span>CHAPTER 02</span><span class="done-badge" data-done-badge="02_least_squares_gauss_newton" hidden>読了</span></span><span class="ttl">最小二乗とガウス・ニュートン法</span><span class="sum">残差とヤコビアン、接線で 0 を探すニュートン法、ガウス・ニュートン法、LM 法。</span><span class="chips"><span class="chip math">数学</span><span class="chip opt">最適化</span><span class="chip time">目安 2 時間</span></span></a><a class="card" href="03_linear_mpc.html"><span class="n"><span>CHAPTER 03</span><span class="done-badge" data-done-badge="03_linear_mpc" hidden>読了</span></span><span class="ttl">線形 MPC</span><span class="sum">未来の状態を入力の列の 1 次式に。コストを 2 次関数に直して解く。制約と QP。</span><span class="chips"><span class="chip mpc">MPC</span><span class="chip time">目安 1.5 時間</span></span></a><a class="card" href="04_nonlinear_mpc.html"><span class="n"><span>CHAPTER 04</span><span class="done-badge" data-done-badge="04_nonlinear_mpc" hidden>読了</span></span><span class="ttl">非線形 MPC</span><span class="sum">連鎖律でヤコビアン。shooting、SQP、RTI。局所解と、微分できないコスト。</span><span class="chips"><span class="chip mpc">MPC</span><span class="chip opt">最適化</span><span class="chip time">目安 2 時間</span></span></a><a class="card" href="05_mppi_basics.html"><span class="n"><span>CHAPTER 05</span><span class="done-badge" data-done-badge="05_mppi_basics" hidden>読了</span></span><span class="ttl">MPPI の考え方</span><span class="sum">試す・評価する・重みをつける・平均する。λ と実効サンプル数。</span><span class="chips"><span class="chip mppi">MPPI</span><span class="chip time">目安 1.5 時間</span></span></a><a class="card" href="06_mppi_theory.html"><span class="n"><span>CHAPTER 06</span><span class="done-badge" data-done-badge="06_mppi_theory" hidden>読了</span></span><span class="ttl">MPPI の理論</span><span class="sum">理想の分布、重点サンプリング、ぼかしたコストの坂。LM 法との対応。</span><span class="chips"><span class="chip mppi">MPPI</span><span class="chip math">数学</span><span class="chip time">目安 2 時間</span></span></a><a class="card" href="07_comparison.html"><span class="n"><span>CHAPTER 07</span><span class="done-badge" data-done-badge="07_comparison" hidden>読了</span></span><span class="ttl">MPC と MPPI の比較</span><span class="sum">式とアルゴリズムの対応、得意・苦手。同じ場面を両方で解くデモ。</span><span class="chips"><span class="chip mpc">MPC</span><span class="chip mppi">MPPI</span><span class="chip time">目安 1 時間</span></span></a><a class="card" href="08_nav2_mppi.html"><span class="n"><span>CHAPTER 08</span><span class="done-badge" data-done-badge="08_nav2_mppi" hidden>読了</span></span><span class="ttl">Nav2 の MPPI</span><span class="sum">パラメータと式の対応、critic、調整の考え方。</span><span class="chips"><span class="chip mppi">MPPI</span><span class="chip nav2">Nav2</span><span class="chip time">目安 1 時間</span></span></a><a class="card" href="09_glossary.html"><span class="n"><span>CHAPTER 09</span><span class="done-badge" data-done-badge="09_glossary" hidden>読了</span></span><span class="ttl">用語集</span><span class="sum">日本語と英語の対応、ひとことでの説明。</span><span class="chips"><span class="chip time">目安 辞書として</span></span></a></div>
+</section>
+
+<section class="section">
+  <h2>演習の環境</h2>
+  <p class="lead">Python 3.9 以上と numpy / scipy / matplotlib があれば全部動きます。</p>
+<pre><code>git clone https://github.com/mamoru1126/study_mpc_mppi.git
+cd study_mpc_mppi
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python exercises/check_env.py
+python exercises/ex05_mppi.py</code></pre>
+</section>
+
+<footer class="site">
+  Markdown 版は <a href="https://github.com/mamoru1126/study_mpc_mppi/tree/master/docs" target="_blank" rel="noopener">docs/</a> にあります。この HTML は <code>python tools/build_html.py</code> で docs/ から生成しています。
+</footer>
+</div>
+</main>
+</div>
+<script src="assets/app.js"></script>
+<script src="assets/ctrl.js"></script>
+<script src="assets/demos.js"></script>
+</body>
+</html>

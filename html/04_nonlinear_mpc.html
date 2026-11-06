@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>非線形 MPC | MPC × MPPI 学習ノート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/katex/katex.css">
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/auto-render.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 Q 12 12 20 4" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 Q 12 12 20 20" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 H 20" fill="none" stroke="var(--mpc)" stroke-width="2.4" stroke-linecap="round"/><circle cx="5" cy="12" r="3" fill="var(--ink)"/></svg><span>MPC × MPPI 学習ノート</span></a>
+  <button class="menu-btn" type="button" aria-expanded="false" aria-label="目次を開く">目次</button>
+</header>
+<div class="layout">
+<nav class="rail" aria-label="章の一覧"><h2>目次</h2><ul class="toc"><li><a href="index.html"><span class="num">◆</span><span>はじめに</span><span></span></a></li><li><a href="00_roadmap.html"><span class="num">00</span><span>学習ロードマップ</span><span class="done" data-done-slug="00_roadmap" title="読了"></span></a></li><li><a href="01_optimal_control.html"><span class="num">01</span><span>最適制御問題と receding horizon</span><span class="done" data-done-slug="01_optimal_control" title="読了"></span></a></li><li><a href="02_least_squares_gauss_newton.html"><span class="num">02</span><span>最小二乗とガウス・ニュートン法</span><span class="done" data-done-slug="02_least_squares_gauss_newton" title="読了"></span></a></li><li><a href="03_linear_mpc.html"><span class="num">03</span><span>線形 MPC</span><span class="done" data-done-slug="03_linear_mpc" title="読了"></span></a></li><li><a href="04_nonlinear_mpc.html" aria-current="page"><span class="num">04</span><span>非線形 MPC</span><span class="done" data-done-slug="04_nonlinear_mpc" title="読了"></span></a></li><li><a href="05_mppi_basics.html"><span class="num">05</span><span>MPPI の考え方</span><span class="done" data-done-slug="05_mppi_basics" title="読了"></span></a></li><li><a href="06_mppi_theory.html"><span class="num">06</span><span>MPPI の理論</span><span class="done" data-done-slug="06_mppi_theory" title="読了"></span></a></li><li><a href="07_comparison.html"><span class="num">07</span><span>MPC と MPPI の比較</span><span class="done" data-done-slug="07_comparison" title="読了"></span></a></li><li><a href="08_nav2_mppi.html"><span class="num">08</span><span>Nav2 の MPPI</span><span class="done" data-done-slug="08_nav2_mppi" title="読了"></span></a></li><li><a href="09_glossary.html"><span class="num">09</span><span>用語集</span><span class="done" data-done-slug="09_glossary" title="読了"></span></a></li></ul><h2>リンク</h2><p class="rail-note"><a href="https://github.com/mamoru1126/study_mpc_mppi" target="_blank" rel="noopener">このリポジトリ</a><br><a href="https://docs.nav2.org/configuration/packages/configuring-mppic.html" target="_blank" rel="noopener">Nav2 の MPPI の設定ガイド</a><br><a href="https://homes.cs.washington.edu/~bboots/files/InformationTheoreticMPC.pdf" target="_blank" rel="noopener">MPPI の論文 (Williams et al. 2017)</a></p><p class="rail-note">各章の最後で「この章を読んだ」にチェックすると、ここに印が付きます (このブラウザにだけ保存)。</p></nav>
+<main>
+<article class="article">
+<div class="chapter-meta"><span class="chip time">第 04 章</span><span class="chip mpc">MPC</span><span class="chip opt">最適化</span><span class="chip time">目安 2 時間</span></div>
+<h1 id="04-非線形-mpc-nmpc">04. 非線形 MPC (NMPC)</h1>
+<h2 id="この章のゴール">この章のゴール</h2>
+<ul>
+<li>非線形モデルの MPC を、残差の 2 乗和としてガウス・ニュートン法で解ける</li>
+<li>ヤコビアンを連鎖律で作れる: <span class="arithmatex">\(\partial x_t / \partial u_s = A_{t-1} \cdots A_{s+1} B_s\)</span></li>
+<li>single shooting と multiple shooting の違い、SQP と RTI の考え方が分かる</li>
+<li>障害物のまわりで局所解に止まる理由と、微分できないコストが効かない理由が分かる</li>
+</ul>
+<blockquote>
+<p><strong>つながり</strong>
+<a href="02_least_squares_gauss_newton.html">02 章</a> のガウス・ニュートン法を、<a href="01_optimal_control.html">01 章</a> の 2 輪ロボットの最適制御問題に当てはめます。<a href="03_linear_mpc.html">03 章</a> の QP は、SQP の中で毎回解く小さな問題として出てきます。</p>
+</blockquote>
+<hr />
+<h2 id="0-この章で使う記号">0. この章で使う記号</h2>
+<table>
+<thead>
+<tr>
+<th>記号</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(A_t = \partial f / \partial x\)</span>, <span class="arithmatex">\(B_t = \partial f / \partial u\)</span></td>
+<td>モデルを <span class="arithmatex">\((x_t, u_t)\)</span> で微分した行列 (今の案のまわりでの線形化)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(U\)</span></td>
+<td>入力の列 (最適化の変数)。2 輪で <span class="arithmatex">\(N = 30\)</span> なら 60 個</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(r(U)\)</span></td>
+<td>残差ベクトル。コストは <span class="arithmatex">\(S(U) = \lVert r(U) \rVert^2\)</span></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(J = \partial r / \partial U\)</span></td>
+<td>残差のヤコビアン</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(d_{\mathrm{s}}\)</span></td>
+<td>安全距離 (人の中心から 1.05 m)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="1-何が難しくなるのか">1. 何が難しくなるのか</h2>
+<p>2 輪ロボットのモデルは <span class="arithmatex">\(\cos\theta\)</span> と <span class="arithmatex">\(\sin\theta\)</span> を含むので、未来の状態は入力の列の非線形な関数になります。そのため、<a href="03_linear_mpc.html">03 章</a> のようにコストを 2 次関数に直して一発で解くことはできません。</p>
+<p>そこで、<strong>今の案のまわりで線形に近似し、03 章のように解いて案を直す、をくり返します</strong>。これが 02 章のガウス・ニュートン法そのものです。</p>
+<h2 id="2-残差を並べる">2. 残差を並べる</h2>
+<p>01 章のコストを、残差の 2 乗の和に書き直します。各時刻の残差を縦に並べたものが <span class="arithmatex">\(r(U)\)</span> です。</p>
+<div class="arithmatex">\[
+r(U) =
+\begin{bmatrix}
+\sqrt{q_{\mathrm{ref}}}\,(p_t - p_t^{\mathrm{ref}}) \\
+\sqrt{q_T}\,(p_N - p_N^{\mathrm{ref}}) \\
+\sqrt{q_\omega}\, \omega_t \\
+\sqrt{q_o}\, \bigl(d_{\mathrm{s}} - \lVert p_t - o_t \rVert\bigr)
+\end{bmatrix}
+\]</div>
+<p>1 行目は <span class="arithmatex">\(t = 1, \dots, N\)</span>、3 行目は <span class="arithmatex">\(t = 0, \dots, N-1\)</span> の全時刻ぶんを縦に並べます。4 行目 (人の罰) は、人の安全距離の内側にいる時刻だけ入れます。外にいる時刻は罰が 0 だからです。こうすると <span class="arithmatex">\(S(U) = \lVert r(U) \rVert^2\)</span> が、ちょうど 01 章のコストになります。演習 4 のある場面では、残差は 92 個 (行)、変数は 60 個 (列) でした。</p>
+<h2 id="3-ヤコビアンを連鎖律で作る">3. ヤコビアンを連鎖律で作る</h2>
+<p>ガウス・ニュートン法には <span class="arithmatex">\(J = \partial r / \partial U\)</span> が必要です。残差は位置 <span class="arithmatex">\(p_t\)</span> から計算するので、「入力 <span class="arithmatex">\(u_s\)</span> を少し変えると、後の状態 <span class="arithmatex">\(x_t\)</span> がどれだけ変わるか」(感度) が分かればよいです。</p>
+<h3 id="31-変化が伝わる様子">3.1 変化が伝わる様子</h3>
+<p>入力 <span class="arithmatex">\(u_s\)</span> を <span class="arithmatex">\(\delta u_s\)</span> だけ変えると、</p>
+<ul>
+<li>次の状態は <span class="arithmatex">\(\delta x_{s+1} = B_s\, \delta u_s\)</span> だけ変わる</li>
+<li>そこから先は、モデルを通るたびに <span class="arithmatex">\(\delta x_{t+1} = A_t\, \delta x_t\)</span> と伝わる</li>
+</ul>
+<p>ので、</p>
+<div class="arithmatex">\[
+\begin{gathered}
+\frac{\partial x_t}{\partial u_s} = A_{t-1} A_{t-2} \cdots A_{s+1} B_s \quad (s < t) \qquad (1) \\
+\frac{\partial x_t}{\partial u_s} = 0 \quad (s \ge t)
+\end{gathered}
+\]</div>
+<p>となります。後の入力は前の状態に影響しないので <span class="arithmatex">\(s \ge t\)</span> では 0 です。これは <a href="03_linear_mpc.html">03 章</a> の <span class="arithmatex">\(\Gamma\)</span> のブロック <span class="arithmatex">\(A^{t-s-1}B\)</span> と同じ形で、違いは <span class="arithmatex">\(A_t\)</span>, <span class="arithmatex">\(B_t\)</span> が時刻ごとに変わることだけです。</p>
+<p>2 輪ロボットのモデル <span class="arithmatex">\(f\)</span> (01 章の式 (1)) を微分すると、次のようになります。</p>
+<div class="arithmatex">\[
+\begin{gathered}
+A_t = \begin{bmatrix} 1 & 0 & -v_t \sin\theta_t\, \Delta t \\ 0 & 1 & v_t \cos\theta_t\, \Delta t \\ 0 & 0 & 1 \end{bmatrix} \\[4pt]
+B_t = \begin{bmatrix} \cos\theta_t\, \Delta t & 0 \\ \sin\theta_t\, \Delta t & 0 \\ 0 & \Delta t \end{bmatrix}
+\end{gathered}
+\]</div>
+<h3 id="32-数値で確かめる">3.2 数値で確かめる</h3>
+<p><span class="arithmatex">\(\theta = 0\)</span>、<span class="arithmatex">\(v = 1\)</span>、<span class="arithmatex">\(\omega = 0\)</span>、<span class="arithmatex">\(\Delta t = 0.1\)</span> のまわりで、<span class="arithmatex">\(u_0\)</span> が 2 ステップ後の <span class="arithmatex">\(x_2\)</span> に与える影響を計算します。</p>
+<div class="arithmatex">\[
+\begin{aligned}
+\frac{\partial x_2}{\partial u_0} = A_1 B_0
+&= \begin{bmatrix} 1 & 0 & 0 \\ 0 & 1 & 0.1 \\ 0 & 0 & 1 \end{bmatrix}
+\begin{bmatrix} 0.1 & 0 \\ 0 & 0 \\ 0 & 0.1 \end{bmatrix} \\
+&= \begin{bmatrix} 0.1 & 0 \\ 0 & 0.01 \\ 0 & 0.1 \end{bmatrix}
+\end{aligned}
+\]</div>
+<p>2 列目を読むと「<span class="arithmatex">\(\omega_0\)</span> を 1 rad/s 増やすと、2 ステップ後の <span class="arithmatex">\(p_y\)</span> が 0.01 m 増える」です。<span class="arithmatex">\(\omega_0\)</span> で向きが 0.1 rad 変わり、そのあと 0.1 m 進むので、横に <span class="arithmatex">\(0.1 \times 0.1 = 0.01\)</span> m ずれる、という意味です。演習 4 では、この方法で作った <span class="arithmatex">\(J\)</span> と数値微分の差が <span class="arithmatex">\(1.8 \times 10^{-8}\)</span> で、正しく作れていることを確かめています。</p>
+<h2 id="4-ガウスニュートン法で解く">4. ガウス・ニュートン法で解く</h2>
+<p>あとは 02 章と同じです。前回の答えを 1 ステップずらした入力の列から始めて、次をくり返します。</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># U = (前回の答えを 1 ステップずらしたもの)</span>
+<span class="k">for</span> <span class="n">it</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">iters</span><span class="p">):</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">rollout</span><span class="p">(</span><span class="n">x_hat</span><span class="p">,</span> <span class="n">U</span><span class="p">)</span>                    <span class="c1"># 予測</span>
+    <span class="n">r</span><span class="p">,</span> <span class="n">J</span> <span class="o">=</span> <span class="n">residual_and_jacobian</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">U</span><span class="p">)</span>       <span class="c1"># 残差と、式 (1) で作ったヤコビアン</span>
+    <span class="n">H</span><span class="p">,</span> <span class="n">g</span> <span class="o">=</span> <span class="n">J</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">J</span><span class="p">,</span> <span class="n">J</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">r</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>                              <span class="c1"># LM 法: 悪くなったら慎重に</span>
+        <span class="n">dU</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">H</span> <span class="o">+</span> <span class="n">mu</span> <span class="o">*</span> <span class="n">diag</span><span class="p">(</span><span class="n">H</span><span class="p">),</span> <span class="o">-</span><span class="n">g</span><span class="p">)</span>
+        <span class="n">U_new</span> <span class="o">=</span> <span class="n">clip</span><span class="p">(</span><span class="n">U</span> <span class="o">+</span> <span class="n">dU</span><span class="p">,</span> <span class="n">u_min</span><span class="p">,</span> <span class="n">u_max</span><span class="p">)</span>   <span class="c1"># 入力の上下限で切る</span>
+        <span class="k">if</span> <span class="n">cost</span><span class="p">(</span><span class="n">U_new</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">cost</span><span class="p">(</span><span class="n">U</span><span class="p">):</span>
+            <span class="n">U</span><span class="p">,</span> <span class="n">mu</span> <span class="o">=</span> <span class="n">U_new</span><span class="p">,</span> <span class="n">mu</span> <span class="o">/</span> <span class="mi">3</span>
+            <span class="k">break</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="n">mu</span> <span class="o">*</span> <span class="mi">4</span>
+<span class="n">send</span><span class="p">(</span><span class="n">U</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>                                   <span class="c1"># 最初の 1 手だけ実行</span>
+<span class="n">U</span> <span class="o">=</span> <span class="n">shift</span><span class="p">(</span><span class="n">U</span><span class="p">)</span>
+</code></pre></div>
+<p>演習 4 で、人の 2.5 m 手前から、まっすぐ進む案を出発点にして反復した様子です (この図だけ、人の向こうまで見えるようにホライズンを 5 秒にしています)。</p>
+<p><img alt="演習 4: 反復ごとの計画とコスト" src="figures/ex04_nmpc_iterations.png" /></p>
+<p>コストは 278.6 → 208.1 → 32.1 → 25.1 → 16.7 と下がり、計画は人をよける形に変わっていきます。実際の制御では、前回の答えから始めるので出発点がすでに答えに近く、1 周期に数回の反復で足ります。</p>
+<h2 id="5-変数の置き方-single-shooting-と-multiple-shooting">5. 変数の置き方: single shooting と multiple shooting</h2>
+<p><img alt="single shooting と multiple shooting" src="figures/fig_shooting.svg" /></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>single shooting</th>
+<th>multiple shooting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>変数</td>
+<td>入力の列だけ</td>
+<td>入力の列と、区間ごとの始点の状態</td>
+</tr>
+<tr>
+<td>状態</td>
+<td>モデルで順に計算する (1 本につながる)</td>
+<td>変数なので最初はつながっていなくてよい。「区間の終わり = 次の始点」を制約にする</td>
+</tr>
+<tr>
+<td>良い点</td>
+<td>変数が少なく、いつもモデルどおりの軌道</td>
+<td>最初の入力の影響が長く伝わらないので数値的に安定。状態の初期値を直接与えられる</td>
+</tr>
+<tr>
+<td>使われ方</td>
+<td>この教材のデモ・演習</td>
+<td>acados など、NMPC のソルバーの標準</td>
+</tr>
+</tbody>
+</table>
+<p>single shooting では、最初のほうの入力が後の状態すべてに効くので、ホライズンが長いと <span class="arithmatex">\(J\)</span> の値の大きさがばらばらになり、解きにくくなります。</p>
+<h2 id="6-sqp-毎回qp-を解いて直す">6. SQP: 毎回、QP を解いて直す</h2>
+<p>入力の上下限や状態の制約をきちんと守るには、各反復で「今の案のまわりで近似した QP」を解きます。今の案を <span class="arithmatex">\((\bar x_t, \bar u_t)\)</span> として、直す量 <span class="arithmatex">\((\Delta x_t, \Delta u_t)\)</span> を変数にした QP です。</p>
+<div class="arithmatex">\[
+\begin{aligned}
+\min_{\Delta x, \Delta u} \quad & \sum_{t} \tfrac12 \begin{bmatrix} \Delta x_t \\ \Delta u_t \end{bmatrix}^{\!\top} H_t \begin{bmatrix} \Delta x_t \\ \Delta u_t \end{bmatrix} + \nabla \ell_t^\top \begin{bmatrix} \Delta x_t \\ \Delta u_t \end{bmatrix} \\
+\text{s.t.} \quad & \Delta x_0 = \hat{x} - \bar x_0, \\
+& \Delta x_{t+1} = A_t\, \Delta x_t + B_t\, \Delta u_t + \bigl( f(\bar x_t, \bar u_t) - \bar x_{t+1} \bigr), \\
+& g(\bar x_t, \bar u_t) + \nabla g_t^\top \begin{bmatrix} \Delta x_t \\ \Delta u_t \end{bmatrix} \le 0
+\end{aligned}
+\]</div>
+<ul>
+<li>1 行目: コストの 2 次近似。<span class="arithmatex">\(H_t\)</span> にガウス・ニュートン近似 <span class="arithmatex">\(J_t^\top J_t\)</span> を使えば、2 階微分がいらず、必ず凸な (確実に解ける) QP になる</li>
+<li>2〜3 行目: モデルの線形化。<span class="arithmatex">\(f(\bar x_t, \bar u_t) - \bar x_{t+1}\)</span> は multiple shooting のつなぎ目のずれで、これも 0 に向かって直される</li>
+<li>4 行目: 制約 <span class="arithmatex">\(g \le 0\)</span> の線形化</li>
+</ul>
+<p>この QP を解いて案を直す、をくり返すのが <strong>SQP</strong> (逐次 2 次計画法) です。制約がなければ、ガウス・ニュートン近似の SQP は 4 節のガウス・ニュートン法と同じものです。この QP は時刻ごとのブロックが鎖のようにつながった形なので、HPIPM などの専用ソルバーでホライズン長に比例する時間で解けます。SQP の代わりに、内点法 (IPOPT など) で元の問題をそのまま解く方法もあります。</p>
+<h2 id="7-rti-1-周期に-1-回だけ直す">7. RTI: 1 周期に 1 回だけ直す</h2>
+<p><strong>Real-Time Iteration (RTI)</strong> は、制御の周期ごとに SQP の反復を 1 回だけ行い、続きは次の周期に持ち越す方法です。</p>
+<ul>
+<li>前回の答えをずらした出発点はすでに答えに近いので、1 回でも十分に追いつける</li>
+<li>状態を測る前に、線形化と QP の準備を済ませておく (準備段階)。測ったら QP を解くだけにして (フィードバック段階)、計算の遅れを小さくする</li>
+</ul>
+<p>この教材のデモの NMPC は、1 周期に 3 回 (既定) だけガウス・ニュートン法を回しており、RTI に近い使い方です。</p>
+<h2 id="8-苦手なこと">8. 苦手なこと</h2>
+<p>演習 4 で、毎周期 3 回反復しながら 3 つの場面を走らせた結果です。</p>
+<p><img alt="演習 4: 3 つの場面での動き" src="figures/ex04_nmpc_closed_loop.png" /></p>
+<table>
+<thead>
+<tr>
+<th>場面</th>
+<th>結果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>少しずれて立つ人・なめらかな罰</td>
+<td>10.4 秒でゴール。人との最小のすき間 0.47 m</td>
+</tr>
+<tr>
+<td>真正面に立つ人・なめらかな罰</td>
+<td>人の手前で止まり、25 秒で時間切れ</td>
+</tr>
+<tr>
+<td>少しずれて立つ人・接触だけ罰</td>
+<td>9.8 秒でゴールに着くが、途中で 1 回接触 (すき間 −0.30 m)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="81-局所解-真正面の人の前で止まる">8.1 局所解: 真正面の人の前で止まる</h3>
+<p>人がちょうど真正面にいると、コストは左右対称です。まっすぐ進む案のまわりでは、左へずれても右へずれてもコストの変わり方が同じなので、<strong>勾配の横向きの成分がちょうど 0</strong> になります。ガウス・ニュートン法は勾配と曲がり具合だけを見るので、左右どちらへよけるかを決められません。残る選択肢は「速度を落として安全距離の手前で止まる」で、これがその場の局所解 (近くでいちばん良い答え) になります。</p>
+<p>制約として扱う SQP でも同じことが起きます。「人から <span class="arithmatex">\(d_{\mathrm s}\)</span> 以上離れる」は、左右どちらからよけてもよい (凸でない) 制約で、SQP では今の位置で線を引いた半平面に置きかえます。</p>
+<div class="arithmatex">\[
+\begin{gathered}
+n_t^\top (p_t - o) \ge d_{\mathrm{s}} \\
+n_t = \frac{\bar p_t - o}{\lVert \bar p_t - o \rVert}
+\end{gathered}
+\]</div>
+<p><span class="arithmatex">\(n_t\)</span> は、人から今の案の位置 <span class="arithmatex">\(\bar p_t\)</span> へ向かう単位ベクトルです。どちら側をよけるかは出発点で決まり、反対側のほうが良くてもそちらへは移れません。人が真正面にいると <span class="arithmatex">\(n_t\)</span> が進行方向と平行になり、横へ動く理由がなくなります。</p>
+<h3 id="82-微分できないコスト-接触だけを罰すると気づかない">8.2 微分できないコスト: 接触だけを罰すると気づかない</h3>
+<p>「接触したら 1 ステップごとに +1000、しなければ 0」という段差のコストは、ほとんどの場所で傾きが 0 です。ガウス・ニュートン法は傾きから改善の向きを決めるので、この罰を見ることができず、人がいないかのように進んで接触します。</p>
+<h3 id="83-対策の例">8.3 対策の例</h3>
+<ul>
+<li>左右それぞれの初期値から解いて、良いほうを使う</li>
+<li>段差ではなく、なめらかな罰 (<a href="01_optimal_control.html">01 章</a> 2.1 節の第 3 項のような形) にする</li>
+<li>サンプリングで良い初期値を見つけ、NMPC で仕上げる (MPPI → <a href="05_mppi_basics.html">05 章</a>)</li>
+</ul>
+<p>下のデモで確かめてください。左が NMPC、右が MPPI です。「真正面の人」では NMPC が止まり、MPPI は回り込みます。</p>
+<div data-demo="duel" data-mode="headon"></div>
+
+<h2 id="演習-4">演習 4</h2>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>exercises/ex04_nmpc.py
+</code></pre></div>
+<p>ヤコビアンの確認 (3 節)、反復ごとの計画 (4 節)、3 つの場面の閉ループ (8 節) を出力し、図を 2 枚作ります。コントローラ本体は <code>exercises/robot2d.py</code> の <code>NMPC</code> クラスです (HTML 版のデモと同じパラメータ)。</p>
+<p>試してみること:</p>
+<ul>
+<li><code>NMPC(scene, mode, iters=3)</code> の <code>iters</code> を 1 や 10 にすると、動きはどう変わるか</li>
+<li>真正面の場面で、最初の入力の列 <code>V</code>, <code>W</code> に少し左へ曲がる値を入れると、止まらずによけられるか</li>
+</ul>
+<h2 id="理解度チェック">理解度チェック</h2>
+<ol>
+<li><span class="arithmatex">\(\partial x_3 / \partial u_0\)</span> を <span class="arithmatex">\(A_t\)</span> と <span class="arithmatex">\(B_t\)</span> で書くと? <span class="arithmatex">\(u_5\)</span> は <span class="arithmatex">\(x_3\)</span> に影響するか?</li>
+<li>3.2 節の例で、<span class="arithmatex">\(v_0\)</span> を 1 m/s 増やすと <span class="arithmatex">\(x_2\)</span> はどう変わるか?</li>
+<li>single shooting と multiple shooting の違いは何か?</li>
+<li>RTI は 1 周期に何をするか。なぜそれで足りるのか?</li>
+<li>真正面に立つ人の手前で NMPC が止まるのはなぜか?</li>
+<li>「接触したら +1000」のコストを、ガウス・ニュートン法が無視してしまうのはなぜか?</li>
+</ol>
+<details>
+<summary>答えの例</summary>
+<ol>
+<li><span class="arithmatex">\(\partial x_3 / \partial u_0 = A_2 A_1 B_0\)</span>。<span class="arithmatex">\(u_5\)</span> は <span class="arithmatex">\(x_3\)</span> より後の入力なので影響しない (<span class="arithmatex">\(\partial x_3 / \partial u_5 = 0\)</span>)。</li>
+<li><span class="arithmatex">\(A_1 B_0\)</span> の 1 列目 <span class="arithmatex">\((0.1, 0, 0)\)</span> より、<span class="arithmatex">\(p_x\)</span> だけが 0.1 m 増える (0.1 秒間に 0.1 m 余分に進む)。</li>
+<li>single shooting は入力だけが変数で、状態はモデルで順に計算する。multiple shooting は区間の始点の状態も変数にし、つなぎ目が一致することを制約にする。後者のほうが数値的に安定。</li>
+<li>SQP の反復を 1 回だけ行い、続きは次の周期に持ち越す。前回の答えをずらした出発点がすでに答えに近いので、1 回の改善でも追いつける。</li>
+<li>左右対称なので、まっすぐの案のまわりで勾配の横向きの成分が 0 になり、左右どちらへよけるかを決められない。速度を落として手前で止まる案が局所解になる。</li>
+<li>段差のコストはほとんどの場所で傾きが 0 なので、勾配と曲がり具合から作る改善の向きに、接触を避ける成分が入らないから。</li>
+</ol>
+</details>
+<h2 id="もっと知りたい人へ">もっと知りたい人へ</h2>
+<ul>
+<li>M. Diehl, H. G. Bock, J. P. Schlöder, "A Real-Time Iteration Scheme for Nonlinear Optimization in Optimal Feedback Control," <em>SIAM J. Control and Optimization</em>, 43(5), pp. 1714–1736, 2005. RTI の元の論文。</li>
+<li>S. Gros, M. Zanon, R. Quirynen, A. Bemporad, M. Diehl, "From linear to nonlinear MPC: bridging the gap via the real-time iteration," <em>International Journal of Control</em>, 93(1), pp. 62–80, 2020. 線形 MPC から RTI までのつながり。</li>
+<li>R. Verschueren et al., "acados—a modular open-source framework for fast embedded optimal control," <em>Mathematical Programming Computation</em>, 14, pp. 147–183, 2022.</li>
+<li>J. A. E. Andersson, J. Gillis, G. Horn, J. B. Rawlings, M. Diehl, "CasADi: a software framework for nonlinear optimization and optimal control," <em>Mathematical Programming Computation</em>, 11, pp. 1–36, 2019.</li>
+</ul>
+<label class="read-toggle"><input type="checkbox" id="read-toggle" data-slug="04_nonlinear_mpc"> この章を読んだ</label>
+<nav class="pager" aria-label="前後の章"><a class="prev" href="03_linear_mpc.html"><small>前へ</small>03 線形 MPC</a><a class="next" href="05_mppi_basics.html"><small>次へ</small>05 MPPI の考え方</a></nav>
+</article>
+</main>
+</div>
+<script src="assets/app.js"></script>
+<script src="assets/ctrl.js"></script>
+<script src="assets/demos.js"></script>
+</body>
+</html>

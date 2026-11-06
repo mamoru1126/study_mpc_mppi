@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 410 230" width="410" height="230" font-family="'Noto Sans JP','Noto Sans CJK JP','Hiragino Sans','Yu Gothic','Meiryo',sans-serif" role="img" aria-label="single shooting では入力だけが変数で、状態は順に計算した 1 本の軌道になる。multiple shooting では区間の始点の状態も変数で、つなぎ目のずれを 0 にすることを制約にする">
+<title>single shooting では入力だけが変数で、状態は順に計算した 1 本の軌道になる。multiple shooting では区間の始点の状態も変数で、つなぎ目のずれを 0 にすることを制約にする</title>
+<defs>
+<marker id="ah-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f2733"/></marker>
+<marker id="ah-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker>
+<marker id="ah-mpc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2a78d6"/></marker>
+<marker id="ah-mppi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#eb6834"/></marker>
+<marker id="ah-opt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6250d6"/></marker>
+</defs>
+<rect width="410" height="230" fill="#ffffff"/>
+<text x="104" y="22" font-size="14" fill="#1f2733" font-weight="700" text-anchor="middle">single shooting</text>
+<text x="304" y="22" font-size="14" fill="#1f2733" font-weight="700" text-anchor="middle">multiple shooting</text>
+<line x1="18" y1="164" x2="192" y2="164" stroke="#c8ced8" stroke-width="1.2"/>
+<line x1="210" y1="164" x2="396" y2="164" stroke="#c8ced8" stroke-width="1.2"/>
+<text x="192" y="178" font-size="11" fill="#586273" text-anchor="end">時刻 →</text>
+<text x="396" y="178" font-size="11" fill="#586273" text-anchor="end">時刻 →</text>
+<polyline points="24,132 26,132 28,131.9 30,131.8 32,131.7 34,131.5 36,131.3 38,131 40,130.7 42,130.3 44,129.9 46,129.4 48,128.8 50,128.2 52,127.6 54,126.9 56,126.1 58,125.3 60,124.4 62,123.5 64,122.6 66,121.6 68,120.5 70,119.4 72,118.3 74,117.1 76,115.9 78,114.6 80,113.3 82,112 84,110.6 86,109.2 88,107.8 90,106.3 92,104.8 94,103.3 96,101.8 98,100.3 100,98.7 102,97.2 104,95.6 106,94 108,92.5 110,90.9 112,89.3 114,87.7 116,86.2 118,84.6 120,83.1 122,81.5 124,80 126,78.5 128,77.1 130,75.6 132,74.2 134,72.8 136,71.5 138,70.2 140,68.9 142,67.7 144,66.5 146,65.3 148,64.2 150,63.2 152,62.2 154,61.2 156,60.3 158,59.5 160,58.7 162,57.9 164,57.3 166,56.6 168,56.1 170,55.6 172,55.2 174,54.8 176,54.5 178,54.3 180,54.1 182,54 184,54" fill="none" stroke="#2a78d6" stroke-width="2.2"/>
+<circle cx="24" cy="132" r="5" fill="#1f2733" stroke="none" stroke-width="1.5"/>
+<circle cx="64" cy="122.6" r="4" fill="#ffffff" stroke="#8a93a3" stroke-width="1.6"/>
+<circle cx="104" cy="95.6" r="4" fill="#ffffff" stroke="#8a93a3" stroke-width="1.6"/>
+<circle cx="144" cy="66.5" r="4" fill="#ffffff" stroke="#8a93a3" stroke-width="1.6"/>
+<circle cx="184" cy="54" r="4" fill="#ffffff" stroke="#8a93a3" stroke-width="1.6"/>
+<path d="M 214 132 Q 236 112 257 126" fill="none" stroke="#2a78d6" stroke-width="2.2"/>
+<line x1="257" y1="126" x2="257" y2="114" stroke="#eb6834" stroke-width="2.2" stroke-dasharray="3 2"/>
+<path d="M 257 114 Q 279 80 300 73" fill="none" stroke="#2a78d6" stroke-width="2.2"/>
+<line x1="300" y1="73" x2="300" y2="84" stroke="#eb6834" stroke-width="2.2" stroke-dasharray="3 2"/>
+<path d="M 300 84 Q 321 74 343 90" fill="none" stroke="#2a78d6" stroke-width="2.2"/>
+<line x1="343" y1="90" x2="343" y2="78" stroke="#eb6834" stroke-width="2.2" stroke-dasharray="3 2"/>
+<path d="M 343 78 Q 365 62 386 58" fill="none" stroke="#2a78d6" stroke-width="2.2"/>
+<line x1="386" y1="58" x2="386" y2="66" stroke="#eb6834" stroke-width="2.2" stroke-dasharray="3 2"/>
+<circle cx="214" cy="132" r="5" fill="#1f2733" stroke="none" stroke-width="1.5"/>
+<circle cx="257" cy="114" r="5" fill="#1f2733" stroke="none" stroke-width="1.5"/>
+<circle cx="300" cy="84" r="5" fill="#1f2733" stroke="none" stroke-width="1.5"/>
+<circle cx="343" cy="78" r="5" fill="#1f2733" stroke="none" stroke-width="1.5"/>
+<circle cx="386" cy="66" r="5" fill="#1f2733" stroke="none" stroke-width="1.5"/>
+<text x="262" y="135" font-size="11.5" fill="#eb6834" font-weight="700" text-anchor="start">ずれ</text>
+<text x="104" y="200" font-size="12.5" fill="#1f2733" text-anchor="middle">変数：入力だけ</text>
+<text x="104" y="218" font-size="12.5" fill="#586273" text-anchor="middle">状態は順に計算する</text>
+<text x="304" y="200" font-size="12" fill="#1f2733" text-anchor="middle">変数：入力と、区間の始点の状態</text>
+<text x="304" y="218" font-size="12.5" fill="#586273" text-anchor="middle">ずれ = 0 を制約にする</text>
+</svg>

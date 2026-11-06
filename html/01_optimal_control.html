@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>最適制御問題と receding horizon | MPC × MPPI 学習ノート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/katex/katex.css">
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/auto-render.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 Q 12 12 20 4" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 Q 12 12 20 20" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 H 20" fill="none" stroke="var(--mpc)" stroke-width="2.4" stroke-linecap="round"/><circle cx="5" cy="12" r="3" fill="var(--ink)"/></svg><span>MPC × MPPI 学習ノート</span></a>
+  <button class="menu-btn" type="button" aria-expanded="false" aria-label="目次を開く">目次</button>
+</header>
+<div class="layout">
+<nav class="rail" aria-label="章の一覧"><h2>目次</h2><ul class="toc"><li><a href="index.html"><span class="num">◆</span><span>はじめに</span><span></span></a></li><li><a href="00_roadmap.html"><span class="num">00</span><span>学習ロードマップ</span><span class="done" data-done-slug="00_roadmap" title="読了"></span></a></li><li><a href="01_optimal_control.html" aria-current="page"><span class="num">01</span><span>最適制御問題と receding horizon</span><span class="done" data-done-slug="01_optimal_control" title="読了"></span></a></li><li><a href="02_least_squares_gauss_newton.html"><span class="num">02</span><span>最小二乗とガウス・ニュートン法</span><span class="done" data-done-slug="02_least_squares_gauss_newton" title="読了"></span></a></li><li><a href="03_linear_mpc.html"><span class="num">03</span><span>線形 MPC</span><span class="done" data-done-slug="03_linear_mpc" title="読了"></span></a></li><li><a href="04_nonlinear_mpc.html"><span class="num">04</span><span>非線形 MPC</span><span class="done" data-done-slug="04_nonlinear_mpc" title="読了"></span></a></li><li><a href="05_mppi_basics.html"><span class="num">05</span><span>MPPI の考え方</span><span class="done" data-done-slug="05_mppi_basics" title="読了"></span></a></li><li><a href="06_mppi_theory.html"><span class="num">06</span><span>MPPI の理論</span><span class="done" data-done-slug="06_mppi_theory" title="読了"></span></a></li><li><a href="07_comparison.html"><span class="num">07</span><span>MPC と MPPI の比較</span><span class="done" data-done-slug="07_comparison" title="読了"></span></a></li><li><a href="08_nav2_mppi.html"><span class="num">08</span><span>Nav2 の MPPI</span><span class="done" data-done-slug="08_nav2_mppi" title="読了"></span></a></li><li><a href="09_glossary.html"><span class="num">09</span><span>用語集</span><span class="done" data-done-slug="09_glossary" title="読了"></span></a></li></ul><h2>リンク</h2><p class="rail-note"><a href="https://github.com/mamoru1126/study_mpc_mppi" target="_blank" rel="noopener">このリポジトリ</a><br><a href="https://docs.nav2.org/configuration/packages/configuring-mppic.html" target="_blank" rel="noopener">Nav2 の MPPI の設定ガイド</a><br><a href="https://homes.cs.washington.edu/~bboots/files/InformationTheoreticMPC.pdf" target="_blank" rel="noopener">MPPI の論文 (Williams et al. 2017)</a></p><p class="rail-note">各章の最後で「この章を読んだ」にチェックすると、ここに印が付きます (このブラウザにだけ保存)。</p></nav>
+<main>
+<article class="article">
+<div class="chapter-meta"><span class="chip time">第 01 章</span><span class="chip mpc">MPC</span><span class="chip mppi">MPPI</span><span class="chip time">目安 1 時間</span></div>
+<h1 id="01-最適制御問題と-receding-horizon">01. 最適制御問題と receding horizon</h1>
+<h2 id="この章のゴール">この章のゴール</h2>
+<ul>
+<li>ロボットの動きを、離散時間のモデル <span class="arithmatex">\(x_{t+1} = f(x_t, u_t)\)</span> で書ける</li>
+<li>「良い動き」を、コストの合計として書ける</li>
+<li>有限ホライズン最適制御問題の各部分が何を表すか説明できる</li>
+<li>計画した入力の列の最初の 1 手だけを実行し、毎周期解き直す (receding horizon) 理由が分かる</li>
+</ul>
+<blockquote>
+<p><strong>つながり</strong>
+この章で作る最適制御問題は、MPC (<a href="02_least_squares_gauss_newton.html">02〜04 章</a>) と MPPI (<a href="05_mppi_basics.html">05・06 章</a>) の両方が解く「共通の問題」です。この章では解き方には触れず、問題の形だけを固めます。</p>
+</blockquote>
+<hr />
+<h2 id="0-この章で使う記号">0. この章で使う記号</h2>
+<table>
+<thead>
+<tr>
+<th>記号</th>
+<th>意味</th>
+<th>この教材の 2 輪ロボットでは</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(x_t\)</span></td>
+<td>時刻 <span class="arithmatex">\(t\)</span> の状態</td>
+<td>位置 <span class="arithmatex">\((p_x, p_y)\)</span> と向き <span class="arithmatex">\(\theta\)</span></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(u_t\)</span></td>
+<td>時刻 <span class="arithmatex">\(t\)</span> の入力</td>
+<td>速度 <span class="arithmatex">\(v\)</span> と角速度 <span class="arithmatex">\(\omega\)</span></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\Delta t\)</span></td>
+<td>1 ステップの時間</td>
+<td>0.1 秒</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(f\)</span></td>
+<td>モデル (次の状態を計算する式)</td>
+<td>下の式 (1)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(N\)</span></td>
+<td>ホライズン (何ステップ先まで考えるか)</td>
+<td>30 ステップ (3 秒)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\ell\)</span>, <span class="arithmatex">\(\phi\)</span></td>
+<td>各時刻のコスト、最後の時刻のコスト</td>
+<td>目標からのずれの 2 乗など</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(U\)</span></td>
+<td>入力の列 <span class="arithmatex">\((u_0, \dots, u_{N-1})\)</span></td>
+<td>2 × 30 = 60 個の数</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\hat{x}\)</span></td>
+<td>今の状態 (センサから推定したもの)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="1-ロボットのモデル">1. ロボットのモデル</h2>
+<h3 id="11-差動-2-輪のモデル">1.1 差動 2 輪のモデル</h3>
+<p>この教材では、左右の車輪の速さを変えて進む・曲がるロボット (差動 2 輪) を例にします。状態は位置と向き、入力は前に進む速度と回る角速度です。</p>
+<div class="arithmatex">\[
+\underbrace{\begin{bmatrix} p_{x,t+1} \\ p_{y,t+1} \\ \theta_{t+1} \end{bmatrix}}_{x_{t+1}}
+=
+\underbrace{\begin{bmatrix} p_{x,t} \\ p_{y,t} \\ \theta_t \end{bmatrix}}_{x_t}
++ \Delta t \begin{bmatrix} v_t \cos\theta_t \\ v_t \sin\theta_t \\ \omega_t \end{bmatrix}
+\qquad (1)
+\]</div>
+<p>意味は「<span class="arithmatex">\(\Delta t\)</span> 秒のあいだ、今の向き <span class="arithmatex">\(\theta_t\)</span> の方向に <span class="arithmatex">\(v_t \Delta t\)</span> だけ進み、<span class="arithmatex">\(\omega_t \Delta t\)</span> だけ回る」です。連続時間の運動を短い時間で区切って近似したもので、まとめて <span class="arithmatex">\(x_{t+1} = f(x_t, u_t)\)</span> と書きます。</p>
+<h3 id="12-数値で-2-ステップ進めてみる">1.2 数値で 2 ステップ進めてみる</h3>
+<p><span class="arithmatex">\(x_0 = (0, 0, 0)\)</span> (原点で <span class="arithmatex">\(x\)</span> 軸の向き) から、入力 <span class="arithmatex">\(u = (v, \omega) = (1.0, 0.5)\)</span> を 2 回続けます (<span class="arithmatex">\(\Delta t = 0.1\)</span>)。</p>
+<div class="arithmatex">\[
+\begin{aligned}
+x_1 &= x_0 + 0.1\,(1.0 \cos 0,\ 1.0 \sin 0,\ 0.5) \\
+&= (0.1,\ 0,\ 0.05) \\[6pt]
+x_2 &= x_1 + 0.1\,(1.0 \cos 0.05,\ 1.0 \sin 0.05,\ 0.5) \\
+&= (0.1999,\ 0.0050,\ 0.10)
+\end{aligned}
+\]</div>
+<p>1 ステップ目で向きが 0.05 rad 変わったので、2 ステップ目は少し左 (<span class="arithmatex">\(+p_y\)</span>) へ進んでいます。</p>
+<h3 id="13-ロールアウト-入力の列が決まれば未来が決まる">1.3 ロールアウト: 入力の列が決まれば未来が決まる</h3>
+<p>入力の列 <span class="arithmatex">\(U = (u_0, \dots, u_{N-1})\)</span> を決めれば、式 (1) を順に当てはめるだけで、未来の状態 <span class="arithmatex">\(x_1, \dots, x_N\)</span> が全部決まります。これを <strong>ロールアウト</strong> と呼びます。</p>
+<p>ここが大事な点です。<strong>私たちが選べるのは入力の列 <span class="arithmatex">\(U\)</span> だけで、未来の状態はその結果として決まる</strong> と考えます。ですから「良い動きを探す」とは「良い入力の列を探す」ことです。</p>
+<h2 id="2-コスト-良い動きを数で表す">2. コスト: 「良い動き」を数で表す</h2>
+<h3 id="21-各時刻のコスト">2.1 各時刻のコスト</h3>
+<p>「良い動き」を、悪さの合計が小さい動きとして表します。この教材のデモでは、各時刻の悪さ (段コスト) を次の 3 つの和にしています。</p>
+<div class="arithmatex">\[
+\begin{aligned}
+\ell(x_t, u_t) = {} & q_{\mathrm{ref}} \lVert p_t - p_t^{\mathrm{ref}} \rVert^2 + q_\omega\, \omega_t^2 \\
+& + q_o \sum_i \max\bigl(0,\ d_{\mathrm{s}} - \lVert p_t - o_{i,t} \rVert \bigr)^2
+\end{aligned}
+\]</div>
+<table>
+<thead>
+<tr>
+<th>項</th>
+<th>意味</th>
+<th>デモの重み</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(\lVert p_t - p_t^{\mathrm{ref}} \rVert^2\)</span></td>
+<td>目標点からのずれ。目標点の列は、ゴールへ向かう直線の上を 0.8 m/s で進む点</td>
+<td><span class="arithmatex">\(q_{\mathrm{ref}} = 1\)</span></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\omega_t^2\)</span></td>
+<td>回りすぎ。ふらふらした動きを抑える</td>
+<td><span class="arithmatex">\(q_\omega = 0.1\)</span></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\max(0, d_{\mathrm{s}} - \lVert p_t - o_{i,t} \rVert)^2\)</span></td>
+<td>人 <span class="arithmatex">\(i\)</span> の予測位置 <span class="arithmatex">\(o_{i,t}\)</span> から安全距離 <span class="arithmatex">\(d_{\mathrm{s}} = 1.05\)</span> m より内側に入った深さの 2 乗。外にいれば 0</td>
+<td><span class="arithmatex">\(q_o = 40\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>数値で確かめます。ある時刻に、目標点から 0.2 m ずれていて、<span class="arithmatex">\(\omega = 0.5\)</span> rad/s で回っていて、人との距離が 0.85 m だとすると</p>
+<div class="arithmatex">\[
+\begin{aligned}
+\ell &= 1 \times 0.2^2 + 0.1 \times 0.5^2 + 40 \times (1.05 - 0.85)^2 \\
+&= 0.04 + 0.025 + 1.6 = 1.665
+\end{aligned}
+\]</div>
+<p>人の安全距離に 0.2 m 入り込むと、目標から 0.2 m ずれるのの 40 倍の罰になります。<strong>重みの比が、何をどれだけ優先するかを決めます。</strong></p>
+<h3 id="22-最後の時刻のコスト-終端コスト">2.2 最後の時刻のコスト (終端コスト)</h3>
+<p>ホライズンの最後の状態 <span class="arithmatex">\(x_N\)</span> には、別の重みをつけます。</p>
+<div class="arithmatex">\[
+\phi(x_N) = q_T \lVert p_N - p_N^{\mathrm{ref}} \rVert^2, \qquad q_T = 5
+\]</div>
+<p>ホライズンの外 (3 秒より先) のことは考えないので、その代わりに「最後の時点で目標から離れていたら強く罰する」ことで、先のことを少しだけ反映します。</p>
+<h3 id="23-なぜ-2-乗にするのか">2.3 なぜ 2 乗にするのか</h3>
+<ul>
+<li>0 のときに最小で、なめらか (微分できる)。そのため、コストを「ずれの 2 乗の和」と見て、<a href="02_least_squares_gauss_newton.html">02 章</a> のガウス・ニュートン法がそのまま使える</li>
+<li>大きなずれほど強く罰する</li>
+</ul>
+<p>なお、MPPI はコストが 2 乗の形でなくてもかまいません (段差のようなコストでも使えます)。これは <a href="05_mppi_basics.html">05 章</a> の大事な性質です。</p>
+<h3 id="24-制約">2.4 制約</h3>
+<p>コストとは別に、守らなければならない条件 (制約) もあります。</p>
+<ul>
+<li>入力の上下限: デモでは <span class="arithmatex">\(0 \le v \le 1\)</span> m/s、<span class="arithmatex">\(-1.5 \le \omega \le 1.5\)</span> rad/s</li>
+<li>状態の制約: 「人から一定距離以上離れる」「壁にぶつからない」など</li>
+</ul>
+<p>デモでは、状態の制約は 2.1 の第 3 項のように <strong>罰 (コスト)</strong> として入れています。破ってもよいが破ると高くつく、という扱いです (ソフト制約)。絶対に守らせる扱い (ハード制約) もあり、MPC は得意ですが、MPPI は苦手です (<a href="07_comparison.html">07 章</a>)。</p>
+<h2 id="3-有限ホライズン最適制御問題">3. 有限ホライズン最適制御問題</h2>
+<p>ここまでをまとめると、次の問題になります。</p>
+<div class="arithmatex">\[
+\begin{aligned}
+\min_{u_0, \dots, u_{N-1}} \quad & J = \sum_{t=0}^{N-1} \ell(x_t, u_t) + \phi(x_N) \\
+\text{s.t.} \quad & x_{t+1} = f(x_t, u_t) \quad (t = 0, \dots, N-1) \\
+& x_0 = \hat{x} \\
+& u_{\min} \le u_t \le u_{\max}
+\end{aligned}
+\qquad (2)
+\]</div>
+<p>読み方:</p>
+<ul>
+<li><strong>変数は入力の列だけ</strong> です。2 輪ロボットで <span class="arithmatex">\(N = 30\)</span> なら <span class="arithmatex">\(2 \times 30 = 60\)</span> 個の数を選びます</li>
+<li><span class="arithmatex">\(x_0 = \hat{x}\)</span>: 今の状態から予測を始めます</li>
+<li><span class="arithmatex">\(x_{t+1} = f(x_t, u_t)\)</span>: 未来はモデルで予測します。モデルが現実とずれていれば、予測も外れます</li>
+<li><strong>有限</strong>: <span class="arithmatex">\(N\)</span> ステップ先までしか考えません。デモでは <span class="arithmatex">\(N \Delta t = 30 \times 0.1 = 3\)</span> 秒先まで</li>
+<li>解くと、最適な入力の列 <span class="arithmatex">\(U^* = (u_0^*, \dots, u_{N-1}^*)\)</span> と、それで予測した軌道が得られます</li>
+</ul>
+<p>この問題を <strong>有限ホライズン最適制御問題</strong> (finite-horizon optimal control problem、OCP) と呼びます。</p>
+<h3 id="31-ホライズンの長さ">3.1 ホライズンの長さ</h3>
+<ul>
+<li>短すぎると、障害物に気づくのが遅れます。デモでは 3 秒・0.8 m/s なので、2.4 m 先までしか見えません</li>
+<li>長すぎると、計算が重くなり、遠い未来の予測は外れやすくなります</li>
+<li>参考: Nav2 の MPPI の既定は 56 ステップ × 0.05 秒 = 2.8 秒です (<a href="08_nav2_mppi.html">08 章</a>)</li>
+</ul>
+<h2 id="4-receding-horizon-最初の-1-手だけ実行して解き直す">4. receding horizon: 最初の 1 手だけ実行して、解き直す</h2>
+<p>式 (2) を解くと 3 秒分の入力の列が得られますが、<strong>実行するのは最初の <span class="arithmatex">\(u_0^*\)</span> だけ</strong> です。</p>
+<ol>
+<li>今の状態 <span class="arithmatex">\(\hat{x}\)</span> を測る (推定する)</li>
+<li>式 (2) を解いて <span class="arithmatex">\(U^* = (u_0^*, \dots, u_{N-1}^*)\)</span> を得る</li>
+<li><span class="arithmatex">\(u_0^*\)</span> だけを <span class="arithmatex">\(\Delta t\)</span> 秒間実行する</li>
+<li>1 に戻る (時刻が 1 ステップ進んだので、考える範囲も 1 ステップ先へずれる)</li>
+</ol>
+<p>考える範囲 (ホライズン) が時間とともに後ろへ下がっていくので、<strong>receding horizon</strong> (後退ホライズン) と呼びます。この「予測して、最初の 1 手だけ実行して、また予測する」のくり返しが、<strong>モデル予測制御</strong> (MPC) の意味です。</p>
+<p><img alt="receding horizon" src="figures/fig_receding_horizon.svg" /></p>
+<h3 id="41-なぜ全部を実行しないのか">4.1 なぜ全部を実行しないのか</h3>
+<p>モデルは現実と完全には一致しませんし、予想しない外乱もあります。毎周期、測り直した状態から計画し直せば、ずれをその都度直せます (フィードバック)。</p>
+<p>演習 1 で確かめます。ロボットは <span class="arithmatex">\(p_y = 0\)</span> の線に沿ってゴール <span class="arithmatex">\((9, 0)\)</span> へ進みたいのですが、<strong>モデルが知らない横風</strong> (<span class="arithmatex">\(+p_y\)</span> 向きに 0.15 m/s) が吹いています。</p>
+<ul>
+<li>(a) 開ループ: 最初に 10 秒分の入力の列を 1 回だけ計画し、そのまま実行する</li>
+<li>(b) receding horizon: 3 秒先まで計画し、最初の 1 手だけ実行して、0.1 秒ごとに計画し直す</li>
+</ul>
+<p><img alt="演習 1: 1 回だけ計画するか、毎周期計画し直すか" src="figures/ex01_receding_horizon.png" /></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>結果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>(a) 開ループ</td>
+<td>計画の上ではゴールにぴったり着くが、実際は 10 秒後に 1.50 m ずれた所にいる</td>
+</tr>
+<tr>
+<td>(b) receding horizon</td>
+<td>8.5 秒でゴールに着く (0.2 m 以内)。横のずれは最大 0.14 m</td>
+</tr>
+</tbody>
+</table>
+<p>(b) の細い線は各時刻の計画で、どれも「線に戻る」計画になっています。風に押されるたびに計画し直すので、ずれがたまりません。ずれが 0 にならず約 0.12 m 残るのは、モデルが風を知らないからです。風をモデルに入れれば打ち消せます。</p>
+<h3 id="42-ウォームスタート-前回の答えを使い回す">4.2 ウォームスタート: 前回の答えを使い回す</h3>
+<p>計画し直すとき、ゼロから解く必要はありません。前回の答えを 1 ステップずらしたもの</p>
+<div class="arithmatex">\[
+(u_1^*, u_2^*, \dots, u_{N-1}^*, u_{N-1}^*)
+\]</div>
+<p>を出発点 (初期値) にします。最後の 1 ステップは空くので、最後の値をコピーして埋めます。前回の答えは今回の答えにかなり近いので、少ない計算で済みます。これを <strong>ウォームスタート</strong> と呼びます。MPC でも MPPI でも、この工夫が速さの鍵になります。</p>
+<h3 id="43-1-周期に使える時間">4.3 1 周期に使える時間</h3>
+<p>制御の周期が 10 Hz なら、測る・解く・送るを全部 0.1 秒以内に終える必要があります。Nav2 の MPPI は 20〜50 Hz 程度で動かします。<strong>「速く、そこそこ良い答えを毎周期出す」</strong> ことが求められる、というのが、両方の方法の設計を決めています。</p>
+<h2 id="5-2-つの解き方の予告">5. 2 つの解き方の予告</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>MPC (勾配を使う)</th>
+<th>MPPI (サンプリングを使う)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>入力の列の直し方</td>
+<td>傾き (微分) から改善の向きを計算する</td>
+<td>ランダムにずらした列を試し、重みつき平均する</td>
+</tr>
+<tr>
+<td>1 周期の計算</td>
+<td>数回の反復。毎回、連立 1 次方程式や QP を解く</td>
+<td><span class="arithmatex">\(K\)</span> 本のロールアウト (並列にできる)</td>
+</tr>
+<tr>
+<td>中心の道具</td>
+<td>ガウス・ニュートン法 (<a href="02_least_squares_gauss_newton.html">02 章</a>)</td>
+<td>重み <span class="arithmatex">\(e^{-S/\lambda}\)</span> (<a href="05_mppi_basics.html">05 章</a>)</td>
+</tr>
+</tbody>
+</table>
+<p>ここから、MPC の列 (02〜04 章) と MPPI の列 (05・06 章) に分かれます。どちらから読んでもかまいません。</p>
+<h2 id="演習-1">演習 1</h2>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>exercises/ex01_receding_horizon.py
+</code></pre></div>
+<p>開ループと receding horizon を比べ、図 <code>docs/figures/ex01_receding_horizon.png</code> を作ります。最適化の中身は 02〜04 章で扱うので、この演習では scipy の汎用ソルバーに任せています。</p>
+<p>試してみること:</p>
+<ul>
+<li><code>WIND</code> を <code>(0.0, 0.3)</code> にすると、(b) のずれはどうなるか</li>
+<li><code>receding_horizon()</code> の <code>N</code> を 10 (1 秒先まで) にすると、動きはどう変わるか</li>
+</ul>
+<h2 id="理解度チェック">理解度チェック</h2>
+<ol>
+<li>2 輪のモデルで、<span class="arithmatex">\(x_0 = (0, 0, \pi/2)\)</span>、<span class="arithmatex">\(u = (1.0, 0)\)</span>、<span class="arithmatex">\(\Delta t = 0.1\)</span> のとき <span class="arithmatex">\(x_1\)</span> は?</li>
+<li>式 (2) の変数は何か。2 輪ロボットで <span class="arithmatex">\(N = 30\)</span> なら、変数はいくつか?</li>
+<li>終端コスト <span class="arithmatex">\(\phi\)</span> は何のためにあるか?</li>
+<li>計画した <span class="arithmatex">\(N\)</span> 個の入力のうち 1 つしか実行しないのはなぜか。残りは捨ててよいか?</li>
+<li>ホライズンを長くすると何が良くなり、何が悪くなるか?</li>
+<li>演習 1 で、receding horizon でも横のずれが 0 にならないのはなぜか?</li>
+</ol>
+<details>
+<summary>答えの例</summary>
+<ol>
+<li>向きが <span class="arithmatex">\(\pi/2\)</span> (<span class="arithmatex">\(+p_y\)</span> 向き) なので、<span class="arithmatex">\(x_1 = (0 + 0.1 \cos\frac{\pi}{2},\ 0 + 0.1 \sin\frac{\pi}{2},\ \frac{\pi}{2}) = (0, 0.1, \pi/2)\)</span>。</li>
+<li>入力の列 <span class="arithmatex">\(U = (u_0, \dots, u_{N-1})\)</span> だけ。状態はモデルで決まる。<span class="arithmatex">\(u_t = (v_t, \omega_t)\)</span> なので <span class="arithmatex">\(2 \times 30 = 60\)</span> 個。</li>
+<li>ホライズンの外のことを考えない代わりに、最後の状態が目標から離れていることを強く罰して、先のことを少し反映するため。</li>
+<li>モデルが現実と一致せず外乱もあるので、測り直した状態から毎周期計画し直すため (フィードバック)。残りは捨てずに、1 ステップずらして次の計算の初期値に使う (ウォームスタート)。</li>
+<li>良くなる点: 遠くの障害物や目標に早く気づける。悪くなる点: 計算が重くなり、遠い未来の予測が外れやすくなる。</li>
+<li>モデルが横風を知らないので、毎回「線に戻る」計画を立てても、実行すると風に押される。押される量と戻す量がつり合う所で、ずれが一定 (約 0.12 m) になる。</li>
+</ol>
+</details>
+<h2 id="もっと知りたい人へ">もっと知りたい人へ</h2>
+<ul>
+<li>J. B. Rawlings, D. Q. Mayne, M. M. Diehl, <em>Model Predictive Control: Theory, Computation, and Design</em>, 2nd ed., Nob Hill Publishing, 2017. 第 1 章が MPC の考え方の入門です。</li>
+</ul>
+<label class="read-toggle"><input type="checkbox" id="read-toggle" data-slug="01_optimal_control"> この章を読んだ</label>
+<nav class="pager" aria-label="前後の章"><a class="prev" href="00_roadmap.html"><small>前へ</small>00 学習ロードマップ</a><a class="next" href="02_least_squares_gauss_newton.html"><small>次へ</small>02 最小二乗とガウス・ニュートン法</a></nav>
+</article>
+</main>
+</div>
+<script src="assets/app.js"></script>
+<script src="assets/ctrl.js"></script>
+<script src="assets/demos.js"></script>
+</body>
+</html>

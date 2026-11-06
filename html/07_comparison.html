@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MPC と MPPI の比較 | MPC × MPPI 学習ノート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/katex/katex.css">
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/auto-render.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 Q 12 12 20 4" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 Q 12 12 20 20" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 H 20" fill="none" stroke="var(--mpc)" stroke-width="2.4" stroke-linecap="round"/><circle cx="5" cy="12" r="3" fill="var(--ink)"/></svg><span>MPC × MPPI 学習ノート</span></a>
+  <button class="menu-btn" type="button" aria-expanded="false" aria-label="目次を開く">目次</button>
+</header>
+<div class="layout">
+<nav class="rail" aria-label="章の一覧"><h2>目次</h2><ul class="toc"><li><a href="index.html"><span class="num">◆</span><span>はじめに</span><span></span></a></li><li><a href="00_roadmap.html"><span class="num">00</span><span>学習ロードマップ</span><span class="done" data-done-slug="00_roadmap" title="読了"></span></a></li><li><a href="01_optimal_control.html"><span class="num">01</span><span>最適制御問題と receding horizon</span><span class="done" data-done-slug="01_optimal_control" title="読了"></span></a></li><li><a href="02_least_squares_gauss_newton.html"><span class="num">02</span><span>最小二乗とガウス・ニュートン法</span><span class="done" data-done-slug="02_least_squares_gauss_newton" title="読了"></span></a></li><li><a href="03_linear_mpc.html"><span class="num">03</span><span>線形 MPC</span><span class="done" data-done-slug="03_linear_mpc" title="読了"></span></a></li><li><a href="04_nonlinear_mpc.html"><span class="num">04</span><span>非線形 MPC</span><span class="done" data-done-slug="04_nonlinear_mpc" title="読了"></span></a></li><li><a href="05_mppi_basics.html"><span class="num">05</span><span>MPPI の考え方</span><span class="done" data-done-slug="05_mppi_basics" title="読了"></span></a></li><li><a href="06_mppi_theory.html"><span class="num">06</span><span>MPPI の理論</span><span class="done" data-done-slug="06_mppi_theory" title="読了"></span></a></li><li><a href="07_comparison.html" aria-current="page"><span class="num">07</span><span>MPC と MPPI の比較</span><span class="done" data-done-slug="07_comparison" title="読了"></span></a></li><li><a href="08_nav2_mppi.html"><span class="num">08</span><span>Nav2 の MPPI</span><span class="done" data-done-slug="08_nav2_mppi" title="読了"></span></a></li><li><a href="09_glossary.html"><span class="num">09</span><span>用語集</span><span class="done" data-done-slug="09_glossary" title="読了"></span></a></li></ul><h2>リンク</h2><p class="rail-note"><a href="https://github.com/mamoru1126/study_mpc_mppi" target="_blank" rel="noopener">このリポジトリ</a><br><a href="https://docs.nav2.org/configuration/packages/configuring-mppic.html" target="_blank" rel="noopener">Nav2 の MPPI の設定ガイド</a><br><a href="https://homes.cs.washington.edu/~bboots/files/InformationTheoreticMPC.pdf" target="_blank" rel="noopener">MPPI の論文 (Williams et al. 2017)</a></p><p class="rail-note">各章の最後で「この章を読んだ」にチェックすると、ここに印が付きます (このブラウザにだけ保存)。</p></nav>
+<main>
+<article class="article">
+<div class="chapter-meta"><span class="chip time">第 07 章</span><span class="chip mpc">MPC</span><span class="chip mppi">MPPI</span><span class="chip time">目安 1 時間</span></div>
+<h1 id="07-mpc-と-mppi-の比較">07. MPC と MPPI の比較</h1>
+<h2 id="この章のゴール">この章のゴール</h2>
+<ul>
+<li>2 つの方法の式とアルゴリズムを並べて、対応を説明できる</li>
+<li>得意・苦手を、具体的な場面 (局所解、段差のコスト、制約、計算資源) で説明できる</li>
+<li>どちらを選ぶか、どう組み合わせるかの考え方を持つ</li>
+</ul>
+<blockquote>
+<p><strong>つながり</strong>
+<a href="00_roadmap.html">01〜06 章</a> のまとめです。最後に、同じ場面を両方の方法で解くデモで確かめます。</p>
+</blockquote>
+<hr />
+<h2 id="1-同じ問題違う解き方">1. 同じ問題、違う解き方</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>MPC (ガウス・ニュートン法・SQP)</th>
+<th>MPPI</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>解く問題</td>
+<td><a href="01_optimal_control.html">01 章</a> の有限ホライズン最適制御問題</td>
+<td>同じ</td>
+</tr>
+<tr>
+<td>変数</td>
+<td>入力の列 <span class="arithmatex">\(U\)</span> (multiple shooting なら状態も)</td>
+<td>入力の列 <span class="arithmatex">\(U\)</span> (ばらつきの平均として)</td>
+</tr>
+<tr>
+<td>まわりの調べ方</td>
+<td>微分: <span class="arithmatex">\(A_t\)</span>, <span class="arithmatex">\(B_t\)</span>, ヤコビアン <span class="arithmatex">\(J\)</span></td>
+<td><span class="arithmatex">\(K\)</span> 本のサンプル <span class="arithmatex">\(\varepsilon^k \sim \mathcal N(0, \Sigma)\)</span></td>
+</tr>
+<tr>
+<td>改善案の作り方</td>
+<td><span class="arithmatex">\(J^\top J\, \Delta = -J^\top r\)</span> (制約があれば QP)</td>
+<td><span class="arithmatex">\(\Delta = \sum_k w_k \varepsilon^k\)</span>、<span class="arithmatex">\(w_k \propto e^{-S_k/\lambda}\)</span></td>
+</tr>
+<tr>
+<td>1 回の更新が意味するもの</td>
+<td><span class="arithmatex">\(\Delta = -(J^\top J + \mu D)^{-1} J^\top r\)</span></td>
+<td><span class="arithmatex">\(\Delta \approx -(\Sigma/\lambda)\, \nabla F_\lambda\)</span> (2 次なら <span class="arithmatex">\(-(A + \lambda\Sigma^{-1})^{-1} \nabla S\)</span>)</td>
+</tr>
+<tr>
+<td>1 周期の反復</td>
+<td>収束まで、または RTI で 1 回</td>
+<td>1 回 (Nav2 の既定)</td>
+</tr>
+<tr>
+<td>1 周期の計算</td>
+<td>微分と、連立方程式または QP</td>
+<td><span class="arithmatex">\(K \times N\)</span> 回のモデル計算 (並列にできる)</td>
+</tr>
+<tr>
+<td>出力</td>
+<td><span class="arithmatex">\(u_0\)</span> を実行して、案をずらす</td>
+<td>同じ</td>
+</tr>
+</tbody>
+</table>
+<p><a href="06_mppi_theory.html">06 章</a> で見たとおり、どちらも「今の案のまわりを調べて、良くなる向きに少し直す」をくり返しています。</p>
+<ul>
+<li>MPC は <strong>元のコスト</strong> の傾きを <strong>微分で正確に</strong> 求める</li>
+<li>MPPI は <strong>ぼかしたコスト</strong> の傾きを <strong>サンプルで推定</strong> する</li>
+</ul>
+<p>この違いから、次の得意・苦手が出てきます。</p>
+<h3 id="11-アルゴリズムを並べる">1.1 アルゴリズムを並べる</h3>
+<div class="vs">
+<div>
+<p><strong>NMPC</strong> (single shooting、ガウス・ニュートン法 + LM 法)</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># U = shift(前回の答え)</span>
+<span class="k">for</span> <span class="n">it</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">iters</span><span class="p">):</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">rollout</span><span class="p">(</span><span class="n">x_hat</span><span class="p">,</span> <span class="n">U</span><span class="p">)</span>
+    <span class="n">r</span><span class="p">,</span> <span class="n">J</span> <span class="o">=</span> <span class="n">residual_and_jacobian</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">U</span><span class="p">)</span>
+    <span class="n">H</span><span class="p">,</span> <span class="n">g</span> <span class="o">=</span> <span class="n">J</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">J</span><span class="p">,</span> <span class="n">J</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">r</span>
+    <span class="n">dU</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">H</span> <span class="o">+</span> <span class="n">mu</span> <span class="o">*</span> <span class="n">diag</span><span class="p">(</span><span class="n">H</span><span class="p">),</span> <span class="o">-</span><span class="n">g</span><span class="p">)</span>
+    <span class="n">U</span> <span class="o">=</span> <span class="n">clip</span><span class="p">(</span><span class="n">U</span> <span class="o">+</span> <span class="n">dU</span><span class="p">,</span> <span class="n">u_min</span><span class="p">,</span> <span class="n">u_max</span><span class="p">)</span>
+<span class="n">send</span><span class="p">(</span><span class="n">U</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</code></pre></div>
+</div>
+<div>
+<p><strong>MPPI</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># U = shift(前回の答え)</span>
+<span class="n">eps</span> <span class="o">=</span> <span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">Sigma</span><span class="p">,</span> <span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">N</span><span class="p">))</span>
+<span class="n">S</span> <span class="o">=</span> <span class="p">[</span><span class="n">cost</span><span class="p">(</span><span class="n">rollout</span><span class="p">(</span><span class="n">x_hat</span><span class="p">,</span> <span class="n">U</span> <span class="o">+</span> <span class="n">eps</span><span class="p">[</span><span class="n">k</span><span class="p">]))</span>
+     <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">K</span><span class="p">)]</span>
+<span class="n">w</span> <span class="o">=</span> <span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">S</span> <span class="o">-</span> <span class="n">S</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="n">lam</span><span class="p">)</span>
+<span class="n">w</span> <span class="o">=</span> <span class="n">w</span> <span class="o">/</span> <span class="n">w</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<span class="n">U</span> <span class="o">=</span> <span class="n">U</span> <span class="o">+</span> <span class="n">w</span> <span class="o">@</span> <span class="n">eps</span>
+<span class="n">send</span><span class="p">(</span><span class="n">U</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</code></pre></div>
+</div>
+</div>
+<p>NMPC は、コストが下がらなかったときに <span class="arithmatex">\(\mu\)</span> を大きくしてやり直す処理を省いています (<a href="04_nonlinear_mpc.html">04 章</a> 4 節)。どちらも「前回の答えをずらして始め、まわりを調べて直し、最初の 1 手を送る」という同じ骨組みで、違うのは真ん中の「調べて直す」部分だけです。</p>
+<h2 id="2-得意苦手">2. 得意・苦手</h2>
+<table>
+<thead>
+<tr>
+<th>観点</th>
+<th>MPC (勾配法・SQP)</th>
+<th>MPPI</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>収束と計算回数</td>
+<td>◎ 傾きと曲がり具合を使い、数回の反復で収束する。デモでは 1 周期のコスト評価が平均 6 回ほど</td>
+<td>△ <span class="arithmatex">\(K\)</span> 本のロールアウトが要る (デモは 300 本、Nav2 の既定は 1000 本)。サンプルが有限なので推定の誤差が残る</td>
+</tr>
+<tr>
+<td>制約</td>
+<td>◎ 入力・状態の制約を QP の制約として正確に扱える</td>
+<td>△ 入力は上下限で切る。状態の制約は罰として入れるだけで、守られる保証はない</td>
+</tr>
+<tr>
+<td>コストの形</td>
+<td>× 微分できる必要がある。段差 (接触したら罰) は傾きが 0 で効かない</td>
+<td>◎ 計算できれば何でもよい (段差、コストマップの参照など)</td>
+</tr>
+<tr>
+<td>局所解</td>
+<td>× 出発点の近くの答えで止まる。真正面の障害物の手前で止まる</td>
+<td>○ ゆらぎで左右の偏りができ、離れた答えにも届く。ただし左右の候補を平均すると、真ん中 (ぶつかる側) に寄ることがある</td>
+</tr>
+<tr>
+<td>モデル</td>
+<td>△ 微分 (ヤコビアン) が要る。自動微分で用意することが多い</td>
+<td>◎ 中身の分からないモデル (シミュレータ、学習したモデル) でもよい</td>
+</tr>
+<tr>
+<td>計算資源</td>
+<td>○ 構造を使った QP で軽い。反復回数しだいで計算時間が変わる</td>
+<td>◎ サンプルごとに独立で、GPU・SIMD 向き。1 周期の計算量が一定</td>
+</tr>
+<tr>
+<td>出力のなめらかさ</td>
+<td>◎ 乱数を使わないのでなめらか</td>
+<td>△ 乱数でガタつく。平滑化や「入力の変化」の罰で抑える</td>
+</tr>
+<tr>
+<td>理論</td>
+<td>◎ 安定性や、制約を満たし続けられることの理論がある (終端コスト・終端制約を使う)</td>
+<td>△ サンプルが有限のときの最適性や安定性の保証は弱い</td>
+</tr>
+<tr>
+<td>調整する値</td>
+<td>重み <span class="arithmatex">\(Q, R, P\)</span>、ホライズン、ソルバーの設定</td>
+<td><span class="arithmatex">\(\lambda\)</span>、<span class="arithmatex">\(\Sigma\)</span>、<span class="arithmatex">\(K\)</span>、ホライズン、平滑化、コストの重み</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-デモで確かめる">3. デモで確かめる</h2>
+<p>左が NMPC (ガウス・ニュートン法、1 周期に 3 回反復)、右が MPPI です。モデル・コスト・場面は同じで、違うのは解き方だけです。</p>
+<div data-demo="duel"></div>
+
+<p>同じ場面を演習のコード (<code>exercises/robot2d.py</code>) で走らせた結果です。</p>
+<table>
+<thead>
+<tr>
+<th>場面</th>
+<th>NMPC</th>
+<th>MPPI (<span class="arithmatex">\(K = 300\)</span>, <span class="arithmatex">\(\lambda = 1\)</span>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>少しずれて立つ人・なめらかな罰</td>
+<td>10.4 秒でゴール</td>
+<td>11.3 秒でゴール</td>
+</tr>
+<tr>
+<td>真正面の人・なめらかな罰</td>
+<td>手前で止まり、時間切れ</td>
+<td>11.7 秒でゴール</td>
+</tr>
+<tr>
+<td>少しずれて立つ人・接触だけ罰</td>
+<td>9.8 秒でゴール、<strong>接触 1 回</strong></td>
+<td>11.0 秒でゴール、接触なし (すき間 0.05 m)</td>
+</tr>
+<tr>
+<td>横切る人・なめらかな罰</td>
+<td>10.7 秒でゴール</td>
+<td>11.4 秒でゴール</td>
+</tr>
+<tr>
+<td>2 人・なめらかな罰</td>
+<td>10.8 秒でゴール</td>
+<td>11.6 秒でゴール</td>
+</tr>
+</tbody>
+</table>
+<p>見どころ:</p>
+<ul>
+<li><strong>少しずれて立つ人・なめらかな罰</strong>: どちらも着きます。NMPC は入力がなめらかで、1 周期のコスト評価が MPPI (301 回) より 2 桁少ない</li>
+<li><strong>真正面の人</strong>: 左右対称で横へ動く理由がなく、NMPC は手前で止まります (<a href="04_nonlinear_mpc.html">04 章</a> 8.1 節)。MPPI はゆらぎで左右の偏りができて回り込みます</li>
+<li><strong>接触だけ罰</strong>: 罰が段差なので傾きが 0 になり、NMPC は人を無視して接触します。MPPI は接触するサンプルの重みがほぼ 0 になるので避けます。ただし、すき間は 0.05 m しかありません。接触しない限り罰がないので、余裕を取る理由がないからです。余裕がほしければ、なめらかな罰も足します</li>
+<li>MPPI の <span class="arithmatex">\(\lambda\)</span> を小さくすると最良の 1 本に引きずられてガタつき、大きくすると更新が進まなくなります (<a href="05_mppi_basics.html">05 章</a> 5 節)</li>
+</ul>
+<h2 id="4-どう選ぶか">4. どう選ぶか</h2>
+<p><strong>MPC が向いている場面</strong></p>
+<ul>
+<li>モデルとコストがなめらかで、微分を用意できる (マニピュレータ、ドローン、良いモデルのある車両など)</li>
+<li>制約を確実に守りたい (入力の限界、安全に関わる状態の制約)</li>
+<li>なめらかな入力がほしい。安定性の保証がほしい</li>
+<li>計算資源が限られている (組み込みの CPU)</li>
+</ul>
+<p><strong>MPPI が向いている場面</strong></p>
+<ul>
+<li>コストが複雑・なめらかでない (コストマップ、接触の罰、地形の通りやすさ)</li>
+<li>よけ方が何通りもある (左右どちらからでも、など)</li>
+<li>モデルが中身の分からないもの (シミュレータ、学習したモデル)</li>
+<li>GPU や SIMD で並列に計算できる</li>
+<li>例: Nav2 のようなコストマップを使う移動ロボット、オフロードの高速走行 (元の論文)</li>
+</ul>
+<p><strong>組み合わせる</strong></p>
+<ul>
+<li>MPPI で大まかな案 (どちら側からよけるか) を決め、NMPC の初期値にして仕上げる</li>
+<li>NMPC の初期値を、複数の候補 (左右など) から選ぶ</li>
+<li>MPPI の出力を平滑化したり、入力の変化に罰をつけたりして、なめらかさを補う</li>
+</ul>
+<h2 id="5-よくある誤解">5. よくある誤解</h2>
+<ul>
+<li><strong>「MPPI は最適化していない (ただのランダム探索)」</strong> → <a href="06_mppi_theory.html">06 章</a> のとおり、ぼかしたコストの坂を下る勾配法になっています。2 次のコストなら LM 法と同じ形です</li>
+<li><strong>「MPC は必ず最適な答えを出す」</strong> → 非線形なら局所的な最適解です。しかも「モデルが正しければ」の最適です</li>
+<li><strong>「λ は温度なので物理的な意味がある」</strong> → Nav2 のパラメータ名が <code>temperature</code> なのは、式の形が統計物理と似ているからで、λ はコスト差の目盛りです (<a href="05_mppi_basics.html">05 章</a> 3 節)</li>
+<li><strong>「サンプルを増やせば MPPI はいくらでも良くなる」</strong> → 推定の誤差は減りますが、ぼかしたコスト <span class="arithmatex">\(F_\lambda\)</span> の坂を下ることは変わりません。ゆらぎ <span class="arithmatex">\(\Sigma\)</span> が届かない範囲は見えません</li>
+</ul>
+<h2 id="理解度チェック">理解度チェック</h2>
+<ol>
+<li>MPC と MPPI の 1 回の更新は、それぞれ何の坂を、どうやって求めた傾きで下っているか?</li>
+<li>制約を確実に守りたいとき、どちらが向いているか。それはなぜか?</li>
+<li>「接触だけ罰」のデモで、MPPI は接触しなかったが、すき間は 0.05 m しかなかった。なぜか。どうすれば余裕を取れるか?</li>
+<li>真正面の人のデモで NMPC を回り込ませるには、どんな工夫が考えられるか?</li>
+<li>GPU があるときに MPPI が有利なのはなぜか?</li>
+</ol>
+<details>
+<summary>答えの例</summary>
+<ol>
+<li>MPC (ガウス・ニュートン法・LM 法) は元のコスト <span class="arithmatex">\(S\)</span> の坂を、微分で正確に求めた傾きで下る。MPPI はぼかしたコスト <span class="arithmatex">\(F_\lambda\)</span> の坂を、サンプルで推定した傾きで下る。</li>
+<li>MPC。制約を QP の制約として扱えるので、近似の範囲で正確に守れる。MPPI は状態の制約を罰で扱うだけなので、守られる保証がない。</li>
+<li>段差の罰は接触しない限り 0 なので、余裕を取る理由がないから。安全距離の内側に入った深さに比例するような、なめらかな罰も足せばよい。</li>
+<li>左右それぞれに曲がる初期値から解いて良いほうを使う、MPPI など別の方法で初期値を作る、左右の対称性を崩す小さなコスト (例: 右側通行を少し好む) を足す、など。</li>
+<li>サンプルごとのロールアウトとコスト計算が互いに独立なので、同時に何千本も計算できるから。</li>
+</ol>
+</details>
+<label class="read-toggle"><input type="checkbox" id="read-toggle" data-slug="07_comparison"> この章を読んだ</label>
+<nav class="pager" aria-label="前後の章"><a class="prev" href="06_mppi_theory.html"><small>前へ</small>06 MPPI の理論</a><a class="next" href="08_nav2_mppi.html"><small>次へ</small>08 Nav2 の MPPI</a></nav>
+</article>
+</main>
+</div>
+<script src="assets/app.js"></script>
+<script src="assets/ctrl.js"></script>
+<script src="assets/demos.js"></script>
+</body>
+</html>

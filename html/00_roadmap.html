@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>学習ロードマップ | MPC × MPPI 学習ノート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/katex/katex.css">
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/auto-render.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 Q 12 12 20 4" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 Q 12 12 20 20" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 H 20" fill="none" stroke="var(--mpc)" stroke-width="2.4" stroke-linecap="round"/><circle cx="5" cy="12" r="3" fill="var(--ink)"/></svg><span>MPC × MPPI 学習ノート</span></a>
+  <button class="menu-btn" type="button" aria-expanded="false" aria-label="目次を開く">目次</button>
+</header>
+<div class="layout">
+<nav class="rail" aria-label="章の一覧"><h2>目次</h2><ul class="toc"><li><a href="index.html"><span class="num">◆</span><span>はじめに</span><span></span></a></li><li><a href="00_roadmap.html" aria-current="page"><span class="num">00</span><span>学習ロードマップ</span><span class="done" data-done-slug="00_roadmap" title="読了"></span></a></li><li><a href="01_optimal_control.html"><span class="num">01</span><span>最適制御問題と receding horizon</span><span class="done" data-done-slug="01_optimal_control" title="読了"></span></a></li><li><a href="02_least_squares_gauss_newton.html"><span class="num">02</span><span>最小二乗とガウス・ニュートン法</span><span class="done" data-done-slug="02_least_squares_gauss_newton" title="読了"></span></a></li><li><a href="03_linear_mpc.html"><span class="num">03</span><span>線形 MPC</span><span class="done" data-done-slug="03_linear_mpc" title="読了"></span></a></li><li><a href="04_nonlinear_mpc.html"><span class="num">04</span><span>非線形 MPC</span><span class="done" data-done-slug="04_nonlinear_mpc" title="読了"></span></a></li><li><a href="05_mppi_basics.html"><span class="num">05</span><span>MPPI の考え方</span><span class="done" data-done-slug="05_mppi_basics" title="読了"></span></a></li><li><a href="06_mppi_theory.html"><span class="num">06</span><span>MPPI の理論</span><span class="done" data-done-slug="06_mppi_theory" title="読了"></span></a></li><li><a href="07_comparison.html"><span class="num">07</span><span>MPC と MPPI の比較</span><span class="done" data-done-slug="07_comparison" title="読了"></span></a></li><li><a href="08_nav2_mppi.html"><span class="num">08</span><span>Nav2 の MPPI</span><span class="done" data-done-slug="08_nav2_mppi" title="読了"></span></a></li><li><a href="09_glossary.html"><span class="num">09</span><span>用語集</span><span class="done" data-done-slug="09_glossary" title="読了"></span></a></li></ul><h2>リンク</h2><p class="rail-note"><a href="https://github.com/mamoru1126/study_mpc_mppi" target="_blank" rel="noopener">このリポジトリ</a><br><a href="https://docs.nav2.org/configuration/packages/configuring-mppic.html" target="_blank" rel="noopener">Nav2 の MPPI の設定ガイド</a><br><a href="https://homes.cs.washington.edu/~bboots/files/InformationTheoreticMPC.pdf" target="_blank" rel="noopener">MPPI の論文 (Williams et al. 2017)</a></p><p class="rail-note">各章の最後で「この章を読んだ」にチェックすると、ここに印が付きます (このブラウザにだけ保存)。</p></nav>
+<main>
+<article class="article">
+<div class="chapter-meta"><span class="chip time">第 00 章</span><span class="chip time">目安 15 分</span></div>
+<h1 id="00-学習ロードマップ">00. 学習ロードマップ</h1>
+<p>この教材は、移動ロボットの制御でよく使われる 2 つの方法、<strong>MPC (モデル予測制御)</strong> と <strong>MPPI (Model Predictive Path Integral)</strong> を、数式から順に理解するためのものです。終わったときに、次のことができるようになるのが目標です。</p>
+<ul>
+<li>2 つの方法が「同じ問題を、違うやり方で解いている」ことを説明できる</li>
+<li>MPC の中身 (最小二乗、ガウス・ニュートン法、QP、SQP) を説明できる</li>
+<li>MPPI の重みつき平均の式と、λ の意味を説明できる</li>
+<li>Nav2 の MPPI のパラメータが、式のどこに当たるか分かる</li>
+</ul>
+<h2 id="ひとことで言うと">ひとことで言うと</h2>
+<p><strong>MPC も MPPI も、「少し先までの動きをモデルで予測し、コストがいちばん小さくなる入力の列を選び、最初の 1 手だけ実行する」をくり返します。違うのは、いちばん良い入力の列の探し方だけです。</strong></p>
+<ul>
+<li><strong>MPC</strong>: コストの傾き (微分) を計算して、良くなる向きへ入力の列を少しずつ直す</li>
+<li><strong>MPPI</strong>: 入力の列をランダムにずらしたものをたくさん試し、コストが低いものほど重くして平均する</li>
+</ul>
+<p><img alt="MPC と MPPI の全体像" src="figures/fig_overview.svg" /></p>
+<h2 id="中心にある-1-つの問題">中心にある 1 つの問題</h2>
+<p>どちらの方法も、制御の周期ごとに次の <strong>有限ホライズン最適制御問題</strong> を解きます。</p>
+<div class="arithmatex">\[
+\begin{aligned}
+\min_{u_0, \dots, u_{N-1}} \quad & J = \sum_{t=0}^{N-1} \ell(x_t, u_t) + \phi(x_N) \\
+\text{s.t.} \quad & x_{t+1} = f(x_t, u_t), \quad x_0 = \hat{x} \\
+& u_{\min} \le u_t \le u_{\max}
+\end{aligned}
+\]</div>
+<table>
+<thead>
+<tr>
+<th>記号</th>
+<th>意味</th>
+<th>詳しくは</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(x_t\)</span>, <span class="arithmatex">\(u_t\)</span></td>
+<td>時刻 <span class="arithmatex">\(t\)</span> の状態 (位置と向き) と入力 (速度と角速度)</td>
+<td><a href="01_optimal_control.html">01 章</a></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(f\)</span></td>
+<td>ロボットのモデル。今の状態と入力から次の状態を計算する</td>
+<td><a href="01_optimal_control.html">01 章</a></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\ell\)</span>, <span class="arithmatex">\(\phi\)</span></td>
+<td>各時刻のコストと、最後の時刻のコスト</td>
+<td><a href="01_optimal_control.html">01 章</a></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(N\)</span></td>
+<td>ホライズン (何ステップ先まで考えるか)</td>
+<td><a href="01_optimal_control.html">01 章</a></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\hat{x}\)</span></td>
+<td>今の状態 (センサから推定したもの)</td>
+<td><a href="01_optimal_control.html">01 章</a></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\min\)</span> の解き方 (MPC)</td>
+<td>傾きを使って入力の列を直す</td>
+<td><a href="02_least_squares_gauss_newton.html">02 章</a>, <a href="03_linear_mpc.html">03 章</a>, <a href="04_nonlinear_mpc.html">04 章</a></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\min\)</span> の解き方 (MPPI)</td>
+<td>試して、重みつき平均する</td>
+<td><a href="05_mppi_basics.html">05 章</a>, <a href="06_mppi_theory.html">06 章</a></td>
+</tr>
+</tbody>
+</table>
+<p>この問題の解き方が 2 通りある、というのがこの教材の骨組みです。</p>
+<h2 id="必要な知識の地図">必要な知識の地図</h2>
+<p><img alt="知識の地図" src="figures/fig_knowledge_map.svg" /></p>
+<table>
+<thead>
+<tr>
+<th>章</th>
+<th>内容</th>
+<th>演習</th>
+<th>目安</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="01_optimal_control.html">01 最適制御問題と receding horizon</a></td>
+<td>モデル・コスト・ホライズン、毎周期解き直す理由</td>
+<td>ex01</td>
+<td>1 時間</td>
+</tr>
+<tr>
+<td><a href="02_least_squares_gauss_newton.html">02 最小二乗とガウス・ニュートン法</a></td>
+<td>残差とヤコビアン、ガウス・ニュートン法、LM 法</td>
+<td>ex02</td>
+<td>2 時間</td>
+</tr>
+<tr>
+<td><a href="03_linear_mpc.html">03 線形 MPC</a></td>
+<td>コストを入力列の 2 次関数に直す、制約と QP</td>
+<td>ex03</td>
+<td>1.5 時間</td>
+</tr>
+<tr>
+<td><a href="04_nonlinear_mpc.html">04 非線形 MPC</a></td>
+<td>連鎖律でヤコビアン、shooting、SQP、RTI、局所解</td>
+<td>ex04</td>
+<td>2 時間</td>
+</tr>
+<tr>
+<td><a href="05_mppi_basics.html">05 MPPI の考え方</a></td>
+<td>サンプルと重み、λ の意味、アルゴリズム</td>
+<td>ex05</td>
+<td>1.5 時間</td>
+</tr>
+<tr>
+<td><a href="06_mppi_theory.html">06 MPPI の理論</a></td>
+<td>理想の分布、重点サンプリング、ぼかしたコストの坂</td>
+<td>ex06</td>
+<td>2 時間</td>
+</tr>
+<tr>
+<td><a href="07_comparison.html">07 MPC と MPPI の比較</a></td>
+<td>式の対応、得意・苦手、同じ場面でのデモ</td>
+<td>-</td>
+<td>1 時間</td>
+</tr>
+<tr>
+<td><a href="08_nav2_mppi.html">08 Nav2 の MPPI</a></td>
+<td>パラメータと式の対応、調整の考え方</td>
+<td>-</td>
+<td>1 時間</td>
+</tr>
+<tr>
+<td><a href="09_glossary.html">09 用語集</a></td>
+<td>日本語と英語の対応</td>
+<td>-</td>
+<td>辞書として</td>
+</tr>
+</tbody>
+</table>
+<h2 id="おすすめの進め方">おすすめの進め方</h2>
+<ol>
+<li><strong>01 章で「解きたい問題」を固める。</strong> ここが両方の方法の土台です。</li>
+<li><strong>MPC の列 (02 → 03 → 04) を読む。</strong> 02 章の道具 (ガウス・ニュートン法) を、03 章で線形の場合、04 章で非線形の場合に使います。</li>
+<li><strong>MPPI の列 (05 → 06) を読む。</strong> 06 章では、02 章の LM 法と同じ形の式が出てきます。</li>
+<li><strong>07 章で比べ、08 章で実際の Nav2 の設定に結びつける。</strong></li>
+</ol>
+<p>急ぐ場合は、目的に合わせて章を選んでもかまいません。</p>
+<ul>
+<li>MPPI を使いたいだけ: 01 → 05 → 07 → 08</li>
+<li>MPC だけ知りたい: 01 → 02 → 03 → 04 → 07</li>
+</ul>
+<p>各章の最後にある「理解度チェック」で、説明できるかを確かめながら進めてください。</p>
+<h2 id="前提知識">前提知識</h2>
+<ul>
+<li>微分 (偏微分、連鎖律)、行列とベクトルの積、転置、逆行列</li>
+<li>確率の基本 (正規分布、期待値)</li>
+<li>Python と numpy が少し読めると、演習が楽になります</li>
+</ul>
+<p>分からない言葉が出てきたら <a href="09_glossary.html">09 用語集</a> を見てください。</p>
+<h2 id="学習を始める前の準備">学習を始める前の準備</h2>
+<p>リポジトリのトップの <a href="index.html">README</a> に従って Python の環境を作り、次を実行してください。</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>exercises/check_env.py
+</code></pre></div>
+<p>演習はすべて numpy / scipy / matplotlib だけで動きます。ROS は不要です。</p>
+<h2 id="理解度チェック-最終目標">理解度チェック (最終目標)</h2>
+<p>この教材を終えたとき、次の質問に答えられるようになっているはずです。</p>
+<ol>
+<li>MPC と MPPI は、何が同じで何が違うか?</li>
+<li>計画した入力の列のうち、最初の 1 手しか実行しないのはなぜか?</li>
+<li>ガウス・ニュートン法の式 <span class="arithmatex">\(J^\top J\,\Delta = -J^\top r\)</span> の各項は何を表すか?</li>
+<li>入力に上限があるとき、「制約なしで解いた答えを上限で切る」だけではいけないのはなぜか?</li>
+<li>非線形 MPC が、真正面に立つ人の手前で止まってしまうのはなぜか?</li>
+<li>MPPI の λ を小さくしすぎる・大きくしすぎると、それぞれ何が起きるか?</li>
+<li>MPPI の更新が「ぼかしたコストの坂を下っている」と言えるのはなぜか?</li>
+<li>Nav2 の <code>temperature</code>、<code>batch_size</code>、<code>time_steps</code>、<code>model_dt</code> は、式のどこに当たるか?</li>
+</ol>
+<label class="read-toggle"><input type="checkbox" id="read-toggle" data-slug="00_roadmap"> この章を読んだ</label>
+<nav class="pager" aria-label="前後の章"><a class="prev" href="index.html"><small>前へ</small>はじめに</a><a class="next" href="01_optimal_control.html"><small>次へ</small>01 最適制御問題と receding horizon</a></nav>
+</article>
+</main>
+</div>
+<script src="assets/app.js"></script>
+<script src="assets/ctrl.js"></script>
+<script src="assets/demos.js"></script>
+</body>
+</html>

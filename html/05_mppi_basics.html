@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MPPI の考え方 | MPC × MPPI 学習ノート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/katex/katex.css">
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/auto-render.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 Q 12 12 20 4" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 Q 12 12 20 20" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 H 20" fill="none" stroke="var(--mpc)" stroke-width="2.4" stroke-linecap="round"/><circle cx="5" cy="12" r="3" fill="var(--ink)"/></svg><span>MPC × MPPI 学習ノート</span></a>
+  <button class="menu-btn" type="button" aria-expanded="false" aria-label="目次を開く">目次</button>
+</header>
+<div class="layout">
+<nav class="rail" aria-label="章の一覧"><h2>目次</h2><ul class="toc"><li><a href="index.html"><span class="num">◆</span><span>はじめに</span><span></span></a></li><li><a href="00_roadmap.html"><span class="num">00</span><span>学習ロードマップ</span><span class="done" data-done-slug="00_roadmap" title="読了"></span></a></li><li><a href="01_optimal_control.html"><span class="num">01</span><span>最適制御問題と receding horizon</span><span class="done" data-done-slug="01_optimal_control" title="読了"></span></a></li><li><a href="02_least_squares_gauss_newton.html"><span class="num">02</span><span>最小二乗とガウス・ニュートン法</span><span class="done" data-done-slug="02_least_squares_gauss_newton" title="読了"></span></a></li><li><a href="03_linear_mpc.html"><span class="num">03</span><span>線形 MPC</span><span class="done" data-done-slug="03_linear_mpc" title="読了"></span></a></li><li><a href="04_nonlinear_mpc.html"><span class="num">04</span><span>非線形 MPC</span><span class="done" data-done-slug="04_nonlinear_mpc" title="読了"></span></a></li><li><a href="05_mppi_basics.html" aria-current="page"><span class="num">05</span><span>MPPI の考え方</span><span class="done" data-done-slug="05_mppi_basics" title="読了"></span></a></li><li><a href="06_mppi_theory.html"><span class="num">06</span><span>MPPI の理論</span><span class="done" data-done-slug="06_mppi_theory" title="読了"></span></a></li><li><a href="07_comparison.html"><span class="num">07</span><span>MPC と MPPI の比較</span><span class="done" data-done-slug="07_comparison" title="読了"></span></a></li><li><a href="08_nav2_mppi.html"><span class="num">08</span><span>Nav2 の MPPI</span><span class="done" data-done-slug="08_nav2_mppi" title="読了"></span></a></li><li><a href="09_glossary.html"><span class="num">09</span><span>用語集</span><span class="done" data-done-slug="09_glossary" title="読了"></span></a></li></ul><h2>リンク</h2><p class="rail-note"><a href="https://github.com/mamoru1126/study_mpc_mppi" target="_blank" rel="noopener">このリポジトリ</a><br><a href="https://docs.nav2.org/configuration/packages/configuring-mppic.html" target="_blank" rel="noopener">Nav2 の MPPI の設定ガイド</a><br><a href="https://homes.cs.washington.edu/~bboots/files/InformationTheoreticMPC.pdf" target="_blank" rel="noopener">MPPI の論文 (Williams et al. 2017)</a></p><p class="rail-note">各章の最後で「この章を読んだ」にチェックすると、ここに印が付きます (このブラウザにだけ保存)。</p></nav>
+<main>
+<article class="article">
+<div class="chapter-meta"><span class="chip time">第 05 章</span><span class="chip mppi">MPPI</span><span class="chip time">目安 1.5 時間</span></div>
+<h1 id="05-mppi-の考え方-サンプリングと重み">05. MPPI の考え方 (サンプリングと重み)</h1>
+<h2 id="この章のゴール">この章のゴール</h2>
+<ul>
+<li>MPPI の 1 周期 (試す → 評価する → 重みをつける → 平均する) を説明できる</li>
+<li>重み <span class="arithmatex">\(w_k \propto \exp(-(S_k - S_{\min}) / \lambda)\)</span> を計算でき、<span class="arithmatex">\(\lambda\)</span> の意味が分かる</li>
+<li>実効サンプル数 (ESS) で、重みの偏りを測れる</li>
+<li>MPPI が微分を使わない (段差のコストでも使える) 理由が分かる</li>
+</ul>
+<blockquote>
+<p><strong>つながり</strong>
+<a href="01_optimal_control.html">01 章</a> の最適制御問題を、微分を使わずに解きます。この章では「どう計算するか」に集中し、「なぜその式なのか」は <a href="06_mppi_theory.html">06 章</a> で扱います。</p>
+</blockquote>
+<hr />
+<h2 id="0-この章で使う記号">0. この章で使う記号</h2>
+<table>
+<thead>
+<tr>
+<th>記号</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(U = (u_0, \dots, u_{N-1})\)</span></td>
+<td>今の案 (入力の列)。前回の答えを 1 ステップずらしたもの</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(K\)</span></td>
+<td>サンプル数 (試す入力の列の本数)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\varepsilon_t^k \sim \mathcal N(0, \Sigma)\)</span></td>
+<td><span class="arithmatex">\(k\)</span> 本目のサンプルの、時刻 <span class="arithmatex">\(t\)</span> のゆらぎ (平均 0、共分散 <span class="arithmatex">\(\Sigma\)</span> の正規分布)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(S_k = S(U + E^k)\)</span></td>
+<td><span class="arithmatex">\(k\)</span> 本目の入力の列 <span class="arithmatex">\(U + E^k\)</span> でロールアウトしたときのコストの合計 (<span class="arithmatex">\(E^k\)</span> はゆらぎの列)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\lambda\)</span></td>
+<td>コスト差の目盛り (Nav2 のパラメータ名は <code>temperature</code>)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(w_k\)</span></td>
+<td><span class="arithmatex">\(k\)</span> 本目の重み (合計 1)</td>
+</tr>
+<tr>
+<td>ESS</td>
+<td>実効サンプル数 <span class="arithmatex">\(1 / \sum_k w_k^2\)</span></td>
+</tr>
+</tbody>
+</table>
+<h2 id="1-1-周期の流れ">1. 1 周期の流れ</h2>
+<p><img alt="MPPI の 1 周期" src="figures/fig_mppi_loop.svg" /></p>
+<ol>
+<li><strong>試す</strong>: 今の案 <span class="arithmatex">\(U\)</span> に、ゆらぎ <span class="arithmatex">\(\varepsilon_t^k\)</span> を足した入力の列を <span class="arithmatex">\(K\)</span> 本作る</li>
+<li><strong>評価する</strong>: それぞれをモデルでロールアウトし、コスト <span class="arithmatex">\(S_k\)</span> を計算する</li>
+<li><strong>重みをつける</strong>: コストが低いものほど重くする</li>
+</ol>
+<div class="arithmatex">\[
+w_k = \frac{\exp\bigl(-(S_k - S_{\min}) / \lambda\bigr)}{\sum_{j=1}^{K} \exp\bigl(-(S_j - S_{\min}) / \lambda\bigr)}
+\qquad (S_{\min} = \min_j S_j)
+\]</div>
+<ol start="4">
+<li><strong>平均する</strong>: 重みつき平均で案を更新する</li>
+</ol>
+<div class="arithmatex">\[
+u_t \leftarrow u_t + \sum_{k=1}^{K} w_k\, \varepsilon_t^k \qquad (t = 0, \dots, N-1)
+\qquad (1)
+\]</div>
+<ol start="5">
+<li><span class="arithmatex">\(u_0\)</span> を実行し、案を 1 ステップずらして次の周期へ (<a href="01_optimal_control.html">01 章</a> の receding horizon と同じ)</li>
+</ol>
+<p>コードにすると次のとおりです。</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># U = (前回の答えを 1 ステップずらしたもの), 形は (N, 入力の数)</span>
+<span class="n">eps</span> <span class="o">=</span> <span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">Sigma</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">N</span><span class="p">))</span>          <span class="c1"># ゆらぎを K 組</span>
+<span class="n">S</span> <span class="o">=</span> <span class="p">[</span><span class="n">cost</span><span class="p">(</span><span class="n">rollout</span><span class="p">(</span><span class="n">x_hat</span><span class="p">,</span> <span class="n">U</span> <span class="o">+</span> <span class="n">eps</span><span class="p">[</span><span class="n">k</span><span class="p">]))</span>        <span class="c1"># 全部試す (並列にできる)</span>
+     <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">K</span><span class="p">)]</span>
+<span class="n">w</span> <span class="o">=</span> <span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">S</span> <span class="o">-</span> <span class="n">S</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="n">lam</span><span class="p">)</span>                <span class="c1"># 低コストほど重く</span>
+<span class="n">w</span> <span class="o">=</span> <span class="n">w</span> <span class="o">/</span> <span class="n">w</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<span class="n">U</span> <span class="o">=</span> <span class="n">U</span> <span class="o">+</span> <span class="n">w</span> <span class="o">@</span> <span class="n">eps</span>                              <span class="c1"># 重みつき平均</span>
+<span class="n">send</span><span class="p">(</span><span class="n">U</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>                                   <span class="c1"># 最初の 1 手だけ実行</span>
+<span class="n">U</span> <span class="o">=</span> <span class="n">shift</span><span class="p">(</span><span class="n">U</span><span class="p">)</span>
+</code></pre></div>
+<p>MPC と違い、微分 (ヤコビアン) も、連立方程式も、QP も出てきません。必要なのは <strong>コストを計算できること</strong> だけです。</p>
+<h2 id="2-重みを手で計算する">2. 重みを手で計算する</h2>
+<p>入力が 1 つで、サンプルが 3 本の例です。ゆらぎとコストが次のとおりだったとします。</p>
+<table>
+<thead>
+<tr>
+<th>サンプル</th>
+<th>ゆらぎ <span class="arithmatex">\(\varepsilon\)</span></th>
+<th>コスト <span class="arithmatex">\(S\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>+0.5</td>
+<td>10</td>
+</tr>
+<tr>
+<td>2</td>
+<td>0</td>
+<td>11</td>
+</tr>
+<tr>
+<td>3</td>
+<td>−0.5</td>
+<td>14</td>
+</tr>
+</tbody>
+</table>
+<p><span class="arithmatex">\(\lambda = 1\)</span> なら、<span class="arithmatex">\(S - S_{\min} = (0, 1, 4)\)</span> なので</p>
+<div class="arithmatex">\[
+\begin{gathered}
+e^{-0} = 1, \quad e^{-1} = 0.368, \quad e^{-4} = 0.018 \\
+\Longrightarrow \quad
+w = \frac{(1,\ 0.368,\ 0.018)}{1.386} = (0.721,\ 0.265,\ 0.013)
+\end{gathered}
+\]</div>
+<p>更新量は <span class="arithmatex">\(\sum_k w_k \varepsilon^k = 0.721 \times 0.5 + 0.265 \times 0 + 0.013 \times (-0.5) = +0.354\)</span> です。いちばん良いサンプル 1 の方向 (+0.5) へ、その 7 割ほど動きます。<span class="arithmatex">\(\lambda\)</span> を変えると次のようになります (演習 5)。</p>
+<table>
+<thead>
+<tr>
+<th><span class="arithmatex">\(\lambda\)</span></th>
+<th>重み <span class="arithmatex">\(w\)</span></th>
+<th>更新量</th>
+<th>ESS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.3</td>
+<td>(0.966, 0.034, 0.000)</td>
+<td>+0.483</td>
+<td>1.07</td>
+</tr>
+<tr>
+<td>1</td>
+<td>(0.721, 0.265, 0.013)</td>
+<td>+0.354</td>
+<td>1.69</td>
+</tr>
+<tr>
+<td>10</td>
+<td>(0.388, 0.351, 0.260)</td>
+<td>+0.064</td>
+<td>2.92</td>
+</tr>
+</tbody>
+</table>
+<h3 id="21-s_min-を引く理由">2.1 <span class="arithmatex">\(S_{\min}\)</span> を引く理由</h3>
+<p>重みの比は、コストの差だけで決まります。</p>
+<div class="arithmatex">\[
+\frac{w_i}{w_j} = \exp\!\left( -\frac{S_i - S_j}{\lambda} \right)
+\]</div>
+<p>全部のコストから同じ <span class="arithmatex">\(S_{\min}\)</span> を引いても、正規化したあとの重みは変わりません。引くのは計算のためです。<span class="arithmatex">\(S = 1000\)</span> のようなコストで <span class="arithmatex">\(e^{-1000}\)</span> を計算すると、コンピュータでは 0 になってしまい (アンダーフロー)、全部 0 で割ることになります。<span class="arithmatex">\(S_{\min}\)</span> を引けば、いちばん良いサンプルの <span class="arithmatex">\(e^{0} = 1\)</span> が必ず残ります。</p>
+<h2 id="3-lambda-の意味-コスト差の目盛り">3. <span class="arithmatex">\(\lambda\)</span> の意味: コスト差の目盛り</h2>
+<p><span class="arithmatex">\(\lambda\)</span> は、<strong>どれくらいのコスト差を「大きな差」とみなすか</strong> を決める目盛りです。</p>
+<table>
+<thead>
+<tr>
+<th><span class="arithmatex">\(\lambda\)</span></th>
+<th>コストが 1 違うときの重みの比</th>
+<th>ふるまい</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.1</td>
+<td>0.00005</td>
+<td>少しの差で重みが大きく変わる。いちばん良い 1 本だけを使うのに近い</td>
+</tr>
+<tr>
+<td>1</td>
+<td>0.37</td>
+<td>差が 1 で、重みが <span class="arithmatex">\(1/e\)</span> 倍</td>
+</tr>
+<tr>
+<td>10</td>
+<td>0.90</td>
+<td>ほぼ同じ重み。ただの平均に近い</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><span class="arithmatex">\(\lambda \to 0\)</span>: いちばん良いサンプルだけを選ぶ。そのサンプルはたまたま良かっただけかもしれないので、毎周期の答えがガタつく</li>
+<li><span class="arithmatex">\(\lambda \to \infty\)</span>: すべての重みが等しくなり、ゆらぎの平均 (ほぼ 0) しか足されないので、案がほとんど良くならない</li>
+<li><strong>ちょうどよい <span class="arithmatex">\(\lambda\)</span> はコストの大きさで変わります。</strong> コストの重みを全部 10 倍にしたら、<span class="arithmatex">\(\lambda\)</span> も 10 倍にしないと同じふるまいになりません</li>
+</ul>
+<p>Nav2 ではこの <span class="arithmatex">\(\lambda\)</span> を <code>temperature</code> というパラメータ名で設定します (既定値 0.3)。物理の式と形が似ていることから付いた名前で、物理的な温度の意味はありません。この教材では「コスト差の目盛り」と呼びます。</p>
+<h3 id="31-実効サンプル数-ess">3.1 実効サンプル数 (ESS)</h3>
+<p>重みがどれだけ偏っているかは、<strong>実効サンプル数</strong> で測れます。</p>
+<div class="arithmatex">\[
+\mathrm{ESS} = \frac{1}{\sum_{k=1}^{K} w_k^2}
+\]</div>
+<p>全部同じ重み (<span class="arithmatex">\(w_k = 1/K\)</span>) なら <span class="arithmatex">\(K\)</span>、1 本に集中すれば 1 です。「実質的に何本分のサンプルを平均しているか」の目安になります。</p>
+<p>下のデモで、<span class="arithmatex">\(\lambda\)</span> とゆらぎの大きさ <span class="arithmatex">\(\sigma\)</span> を動かして、重みと ESS の変わり方を見てください。コストは <span class="arithmatex">\(S(u) = 2(u - 2)^2 + 8\)</span> (最小点 <span class="arithmatex">\(u = 2\)</span>)、今の案は <span class="arithmatex">\(u = 0\)</span> です。</p>
+<div data-demo="weights"></div>
+
+<h2 id="4-ロボットで-1-回だけ更新してみる">4. ロボットで 1 回だけ更新してみる</h2>
+<p>演習 5 で、2 輪ロボットに MPPI を 1 回だけ使います。人の 2.5 m 手前で、まっすぐ進む案から始め、<span class="arithmatex">\(K = 300\)</span>、<span class="arithmatex">\(\lambda = 1\)</span> で更新します。</p>
+<p><img alt="演習 5: 1 回の更新" src="figures/ex05_mppi_samples.png" /></p>
+<ul>
+<li>300 本のうち、人の近くを通るサンプルはコストが大きく、重みはほぼ 0 (灰色)</li>
+<li>人の右下を回り込むサンプルに重みが集まる。重み 0.01 以上は 11 本で、ESS は 10.4</li>
+<li>右の図のとおり、重みはコストが 1 増えるごとに <span class="arithmatex">\(1/e\)</span> 倍になる</li>
+</ul>
+<p>更新前の案のコストは 120.1、更新後は 7.1 になりました。面白いのは、<strong>サンプルの中でいちばん良いもの (8.5) より、平均した案 (7.1) のほうが良い</strong> ことです。良いサンプルどうしを平均すると、それぞれのランダムなでこぼこが打ち消し合うためです。</p>
+<h2 id="5-lambda-を変えて動かす">5. <span class="arithmatex">\(\lambda\)</span> を変えて動かす</h2>
+<p>同じ場面 (少しずれて立つ人) を、<span class="arithmatex">\(\lambda\)</span> を変えて最後まで走らせます (演習 5)。</p>
+<p><img alt="演習 5: λ の効果" src="figures/ex05_mppi_lambda.png" /></p>
+<table>
+<thead>
+<tr>
+<th><span class="arithmatex">\(\lambda\)</span></th>
+<th>ゴールまで</th>
+<th>ESS の平均</th>
+<th><span class="arithmatex">\(\omega\)</span> の 1 ステップごとの変化の平均</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.01</td>
+<td>11.0 秒</td>
+<td>1.1</td>
+<td>0.90 rad/s</td>
+</tr>
+<tr>
+<td>1</td>
+<td>11.4 秒</td>
+<td>84.5</td>
+<td>0.18 rad/s</td>
+</tr>
+<tr>
+<td>100</td>
+<td>16.1 秒</td>
+<td>297.0</td>
+<td>0.13 rad/s</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><span class="arithmatex">\(\lambda = 0.01\)</span> は毎周期「いちばん良い 1 本」に乗り換えるので、角速度がガタガタになる</li>
+<li><span class="arithmatex">\(\lambda = 100\)</span> はほぼ単純な平均になり、更新が進まないので、大回りしてゴールまで時間がかかる</li>
+</ul>
+<h2 id="6-ゆらぎの大きさ-sigma-とサンプル数-k">6. ゆらぎの大きさ <span class="arithmatex">\(\Sigma\)</span> とサンプル数 <span class="arithmatex">\(K\)</span></h2>
+<ul>
+<li><strong><span class="arithmatex">\(\Sigma\)</span> (ゆらぎの大きさ)</strong> は、どれだけ広く探すかを決めます</li>
+<li>小さすぎると、よけ道のような大きく違う案が見つからない</li>
+<li>大きすぎると、ほとんどのサンプルが悪くなって ESS が下がり、答えがガタつく</li>
+<li>デモでは <span class="arithmatex">\(\omega\)</span> の標準偏差 0.8 rad/s、<span class="arithmatex">\(v\)</span> は その 0.35 倍。Nav2 では <code>vx_std</code>、<code>wz_std</code> で設定する</li>
+<li><strong><span class="arithmatex">\(K\)</span> (サンプル数)</strong> を増やすと、重みつき平均の推定が正確になります (誤差はおよそ <span class="arithmatex">\(1/\sqrt{K}\)</span> に比例。<a href="06_mppi_theory.html">06 章</a>)</li>
+<li>計算量は <span class="arithmatex">\(K \times N\)</span> 回のモデル計算に比例する。デモは <span class="arithmatex">\(300 \times 30 = 9{,}000\)</span> 回、Nav2 の既定は <span class="arithmatex">\(1000 \times 56 = 56{,}000\)</span> 回</li>
+<li>サンプルどうしは独立なので、GPU や SIMD で並列に計算できる</li>
+<li><strong>入力の上下限</strong>: サンプルを作ったあとに上下限で切り、切ったあとの値との差をゆらぎとして使います (デモと演習のコード)</li>
+</ul>
+<h2 id="7-微分がいらないという強み">7. 微分がいらない、という強み</h2>
+<p>MPPI はコストの値しか使わないので、次のようなコストでもそのまま使えます。</p>
+<ul>
+<li><strong>段差のあるコスト</strong>: 「接触したら +1000」。<a href="04_nonlinear_mpc.html">04 章</a> の NMPC は傾きが 0 で気づけなかったが、MPPI では接触するサンプルの重みがほぼ 0 になるので自然に避ける</li>
+<li><strong>表を引くだけのコスト</strong>: 地図 (コストマップ) の値を足し合わせるなど</li>
+<li><strong>中身の分からないモデル</strong>: シミュレータや学習したモデルでロールアウトしてもよい</li>
+</ul>
+<p>一方、1 周期に <span class="arithmatex">\(K\)</span> 本のロールアウトが必要なので、MPC (1 周期に数回〜十数回のコスト評価) より計算は多くなります。</p>
+<h2 id="8-実装でよく加える工夫">8. 実装でよく加える工夫</h2>
+<ul>
+<li><strong>補正項</strong>: 元の論文では、コストに <span class="arithmatex">\(\lambda \sum_t u_t^\top \Sigma^{-1} \varepsilon_t^k\)</span> を足してから重みを計算します (<a href="06_mppi_theory.html">06 章</a>)。Nav2 ではこの係数を <code>gamma</code> という別のパラメータにしています</li>
+<li><strong>平滑化</strong>: 更新した入力の列はガタつきやすいので、なめらかにします。Nav2 は Savitzky–Golay フィルタを使います</li>
+<li><strong>反復</strong>: 1 周期に 1〜3 を数回くり返すこともできます。Nav2 の既定は 1 回です</li>
+</ul>
+<p>この教材のデモと演習の MPPI は、式 (1) だけの最も簡単な形です (補正項も平滑化もなし)。</p>
+<h2 id="演習-5">演習 5</h2>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>exercises/ex05_mppi.py
+</code></pre></div>
+<p>2 節の表、4 節の 1 回の更新、5 節の <span class="arithmatex">\(\lambda\)</span> の比較を出力し、図を 2 枚作ります。コントローラ本体は <code>exercises/robot2d.py</code> の <code>MPPI</code> クラスです。</p>
+<p>試してみること:</p>
+<ul>
+<li><code>MPPI(..., sigma_w=0.8)</code> を 0.2 や 2.0 にすると、ESS と動きはどう変わるか</li>
+<li><code>K=300</code> を 30 にすると、どうなるか</li>
+</ul>
+<h2 id="理解度チェック">理解度チェック</h2>
+<ol>
+<li>コストが (5, 6, 9) の 3 本のサンプルの重みを、<span class="arithmatex">\(\lambda = 1\)</span> で計算すると?</li>
+<li>重みを計算するときに <span class="arithmatex">\(S_{\min}\)</span> を引くのはなぜか。引くと重みは変わるか?</li>
+<li><span class="arithmatex">\(\lambda \to 0\)</span> と <span class="arithmatex">\(\lambda \to \infty\)</span> で、MPPI はそれぞれどうふるまうか?</li>
+<li>コストの重みを全部 2 倍にしたとき、同じふるまいにするには <span class="arithmatex">\(\lambda\)</span> をどうすればよいか?</li>
+<li>ESS = 1 と ESS = <span class="arithmatex">\(K\)</span> は、それぞれどういう状態か?</li>
+<li>MPPI が「接触したら +1000」というコストでも人を避けられるのはなぜか?</li>
+<li>平均した案が、どのサンプルよりも良くなることがあるのはなぜか?</li>
+</ol>
+<details>
+<summary>答えの例</summary>
+<ol>
+<li>差は (0, 1, 4) で 2 節の例と同じなので、<span class="arithmatex">\(w = (0.721, 0.265, 0.013)\)</span>。重みはコストの差だけで決まる。</li>
+<li><span class="arithmatex">\(e^{-S}\)</span> が小さくなりすぎて 0 になる (アンダーフロー) のを防ぐため。全部から同じ数を引くだけなので、正規化したあとの重みは変わらない。</li>
+<li><span class="arithmatex">\(\lambda \to 0\)</span>: いちばんコストの低い 1 本だけを選ぶ (ガタつく)。<span class="arithmatex">\(\lambda \to \infty\)</span>: 全部が同じ重みになり、ゆらぎの平均 (ほぼ 0) を足すだけなので、案がほとんど良くならない。</li>
+<li><span class="arithmatex">\(\lambda\)</span> も 2 倍にする。重みは <span class="arithmatex">\((S_i - S_j) / \lambda\)</span> で決まるので、コストと <span class="arithmatex">\(\lambda\)</span> を同じ倍率にすれば変わらない。</li>
+<li>ESS = 1: 重みが 1 本に集中している。ESS = <span class="arithmatex">\(K\)</span>: 全部が同じ重み。</li>
+<li>接触するサンプルはコストが 1000 以上大きいので、重みが <span class="arithmatex">\(e^{-1000/\lambda}\)</span> 倍、つまりほぼ 0 になり、平均にほとんど入らないから。傾きを使わないので、段差でも問題にならない。</li>
+<li>良いサンプルにもそれぞれランダムなでこぼこがあり、平均するとそれが打ち消し合うから。</li>
+</ol>
+</details>
+<h2 id="もっと知りたい人へ">もっと知りたい人へ</h2>
+<ul>
+<li>G. Williams, P. Drews, B. Goldfain, J. M. Rehg, E. A. Theodorou, "Aggressive Driving with Model Predictive Path Integral Control," ICRA 2016. MPPI を実車 (1/5 スケールの車) で攻めた走行に使った論文。</li>
+<li>G. Williams et al., "Information Theoretic MPC for Model-Based Reinforcement Learning," ICRA 2017. この章の重みつき平均の形を、情報理論の考え方 (<a href="06_mppi_theory.html">06 章</a>) から導いた論文。</li>
+</ul>
+<label class="read-toggle"><input type="checkbox" id="read-toggle" data-slug="05_mppi_basics"> この章を読んだ</label>
+<nav class="pager" aria-label="前後の章"><a class="prev" href="04_nonlinear_mpc.html"><small>前へ</small>04 非線形 MPC</a><a class="next" href="06_mppi_theory.html"><small>次へ</small>06 MPPI の理論</a></nav>
+</article>
+</main>
+</div>
+<script src="assets/app.js"></script>
+<script src="assets/ctrl.js"></script>
+<script src="assets/demos.js"></script>
+</body>
+</html>

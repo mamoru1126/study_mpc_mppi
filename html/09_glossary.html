@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>用語集 | MPC × MPPI 学習ノート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/katex/katex.css">
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/auto-render.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 Q 12 12 20 4" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 Q 12 12 20 20" fill="none" stroke="var(--mppi)" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><path d="M5 12 H 20" fill="none" stroke="var(--mpc)" stroke-width="2.4" stroke-linecap="round"/><circle cx="5" cy="12" r="3" fill="var(--ink)"/></svg><span>MPC × MPPI 学習ノート</span></a>
+  <button class="menu-btn" type="button" aria-expanded="false" aria-label="目次を開く">目次</button>
+</header>
+<div class="layout">
+<nav class="rail" aria-label="章の一覧"><h2>目次</h2><ul class="toc"><li><a href="index.html"><span class="num">◆</span><span>はじめに</span><span></span></a></li><li><a href="00_roadmap.html"><span class="num">00</span><span>学習ロードマップ</span><span class="done" data-done-slug="00_roadmap" title="読了"></span></a></li><li><a href="01_optimal_control.html"><span class="num">01</span><span>最適制御問題と receding horizon</span><span class="done" data-done-slug="01_optimal_control" title="読了"></span></a></li><li><a href="02_least_squares_gauss_newton.html"><span class="num">02</span><span>最小二乗とガウス・ニュートン法</span><span class="done" data-done-slug="02_least_squares_gauss_newton" title="読了"></span></a></li><li><a href="03_linear_mpc.html"><span class="num">03</span><span>線形 MPC</span><span class="done" data-done-slug="03_linear_mpc" title="読了"></span></a></li><li><a href="04_nonlinear_mpc.html"><span class="num">04</span><span>非線形 MPC</span><span class="done" data-done-slug="04_nonlinear_mpc" title="読了"></span></a></li><li><a href="05_mppi_basics.html"><span class="num">05</span><span>MPPI の考え方</span><span class="done" data-done-slug="05_mppi_basics" title="読了"></span></a></li><li><a href="06_mppi_theory.html"><span class="num">06</span><span>MPPI の理論</span><span class="done" data-done-slug="06_mppi_theory" title="読了"></span></a></li><li><a href="07_comparison.html"><span class="num">07</span><span>MPC と MPPI の比較</span><span class="done" data-done-slug="07_comparison" title="読了"></span></a></li><li><a href="08_nav2_mppi.html"><span class="num">08</span><span>Nav2 の MPPI</span><span class="done" data-done-slug="08_nav2_mppi" title="読了"></span></a></li><li><a href="09_glossary.html" aria-current="page"><span class="num">09</span><span>用語集</span><span class="done" data-done-slug="09_glossary" title="読了"></span></a></li></ul><h2>リンク</h2><p class="rail-note"><a href="https://github.com/mamoru1126/study_mpc_mppi" target="_blank" rel="noopener">このリポジトリ</a><br><a href="https://docs.nav2.org/configuration/packages/configuring-mppic.html" target="_blank" rel="noopener">Nav2 の MPPI の設定ガイド</a><br><a href="https://homes.cs.washington.edu/~bboots/files/InformationTheoreticMPC.pdf" target="_blank" rel="noopener">MPPI の論文 (Williams et al. 2017)</a></p><p class="rail-note">各章の最後で「この章を読んだ」にチェックすると、ここに印が付きます (このブラウザにだけ保存)。</p></nav>
+<main>
+<article class="article">
+<div class="chapter-meta"><span class="chip time">第 09 章</span><span class="chip time">目安 辞書として</span></div>
+<h1 id="09-用語集">09. 用語集</h1>
+<p>教材に出てくる言葉を、日本語・英語・ひとことの説明・主に出てくる章で並べました。辞書として使ってください。</p>
+<h2 id="最適制御と-mpc">最適制御と MPC</h2>
+<table>
+<thead>
+<tr>
+<th>日本語</th>
+<th>英語</th>
+<th>ひとことで</th>
+<th>章</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>状態</td>
+<td>state</td>
+<td>ロボットの今の様子を表す数 (位置と向きなど)</td>
+<td><a href="01_optimal_control.html">01</a></td>
+</tr>
+<tr>
+<td>入力</td>
+<td>input, control</td>
+<td>ロボットに与える指令 (速度と角速度など)</td>
+<td><a href="01_optimal_control.html">01</a></td>
+</tr>
+<tr>
+<td>モデル</td>
+<td>model, dynamics</td>
+<td>今の状態と入力から次の状態を計算する式 <span class="arithmatex">\(x_{t+1} = f(x_t, u_t)\)</span></td>
+<td><a href="01_optimal_control.html">01</a></td>
+</tr>
+<tr>
+<td>ロールアウト</td>
+<td>rollout</td>
+<td>入力の列をモデルに順に入れて、未来の状態を計算すること</td>
+<td><a href="01_optimal_control.html">01</a></td>
+</tr>
+<tr>
+<td>コスト</td>
+<td>cost, objective</td>
+<td>動きの悪さを表す数。小さいほど良い</td>
+<td><a href="01_optimal_control.html">01</a></td>
+</tr>
+<tr>
+<td>段コスト</td>
+<td>stage cost</td>
+<td>各時刻のコスト <span class="arithmatex">\(\ell(x_t, u_t)\)</span></td>
+<td><a href="01_optimal_control.html">01</a></td>
+</tr>
+<tr>
+<td>終端コスト</td>
+<td>terminal cost</td>
+<td>最後の時刻のコスト <span class="arithmatex">\(\phi(x_N)\)</span>。ホライズンの外の代わり</td>
+<td><a href="01_optimal_control.html">01</a></td>
+</tr>
+<tr>
+<td>ホライズン</td>
+<td>horizon</td>
+<td>何ステップ先まで予測して考えるか (<span class="arithmatex">\(N\)</span>、または時間 <span class="arithmatex">\(N\Delta t\)</span>)</td>
+<td><a href="01_optimal_control.html">01</a></td>
+</tr>
+<tr>
+<td>有限ホライズン最適制御問題</td>
+<td>finite-horizon optimal control problem (OCP)</td>
+<td><span class="arithmatex">\(N\)</span> ステップ先までのコストを最小にする入力の列を求める問題</td>
+<td><a href="01_optimal_control.html">01</a></td>
+</tr>
+<tr>
+<td>モデル予測制御</td>
+<td>model predictive control (MPC)</td>
+<td>予測して最適な入力の列を求め、最初の 1 手だけ実行する、をくり返す制御</td>
+<td><a href="01_optimal_control.html">01</a></td>
+</tr>
+<tr>
+<td>receding horizon</td>
+<td>receding horizon</td>
+<td>考える範囲が時間とともに後ろへ下がっていくこと。毎周期解き直す</td>
+<td><a href="01_optimal_control.html">01</a></td>
+</tr>
+<tr>
+<td>ウォームスタート</td>
+<td>warm start</td>
+<td>前回の答えを 1 ステップずらして、次の計算の出発点にすること</td>
+<td><a href="01_optimal_control.html">01</a></td>
+</tr>
+<tr>
+<td>開ループ / 閉ループ</td>
+<td>open loop / closed loop</td>
+<td>測り直さずに実行する / 測り直して直しながら実行する</td>
+<td><a href="01_optimal_control.html">01</a></td>
+</tr>
+<tr>
+<td>制約</td>
+<td>constraint</td>
+<td>守るべき条件 (入力の上下限、障害物から離れるなど)</td>
+<td><a href="01_optimal_control.html">01</a></td>
+</tr>
+<tr>
+<td>ソフト制約 / ハード制約</td>
+<td>soft / hard constraint</td>
+<td>破ると罰がつく / 絶対に守る</td>
+<td><a href="01_optimal_control.html">01</a>, <a href="07_comparison.html">07</a></td>
+</tr>
+<tr>
+<td>罰 (ペナルティ)</td>
+<td>penalty</td>
+<td>望ましくない状態にコストを足すこと</td>
+<td><a href="01_optimal_control.html">01</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="最適化">最適化</h2>
+<table>
+<thead>
+<tr>
+<th>日本語</th>
+<th>英語</th>
+<th>ひとことで</th>
+<th>章</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>最小二乗</td>
+<td>least squares</td>
+<td>残差の 2 乗和を最小にすること</td>
+<td><a href="02_least_squares_gauss_newton.html">02</a></td>
+</tr>
+<tr>
+<td>残差</td>
+<td>residual</td>
+<td>0 にしたい「ずれ」</td>
+<td><a href="02_least_squares_gauss_newton.html">02</a></td>
+</tr>
+<tr>
+<td>正規方程式</td>
+<td>normal equations</td>
+<td>残差が 1 次式のときの最小二乗の答えの式 <span class="arithmatex">\(A^\top A z = A^\top b\)</span></td>
+<td><a href="02_least_squares_gauss_newton.html">02</a></td>
+</tr>
+<tr>
+<td>ヤコビアン</td>
+<td>Jacobian</td>
+<td>各残差を各変数で微分した値を並べた行列 <span class="arithmatex">\(J\)</span></td>
+<td><a href="02_least_squares_gauss_newton.html">02</a></td>
+</tr>
+<tr>
+<td>勾配</td>
+<td>gradient</td>
+<td>コストが最も増える向き。最小二乗では <span class="arithmatex">\(J^\top r\)</span></td>
+<td><a href="02_least_squares_gauss_newton.html">02</a></td>
+</tr>
+<tr>
+<td>ヘッセ行列</td>
+<td>Hessian</td>
+<td>コストの 2 階微分を並べた行列。曲がり具合</td>
+<td><a href="02_least_squares_gauss_newton.html">02</a></td>
+</tr>
+<tr>
+<td>最急降下法</td>
+<td>steepest descent, gradient descent</td>
+<td>勾配の逆向きに進む方法</td>
+<td><a href="02_least_squares_gauss_newton.html">02</a></td>
+</tr>
+<tr>
+<td>ニュートン法</td>
+<td>Newton's method</td>
+<td>接線 (2 次近似) を使って答えに近づく方法</td>
+<td><a href="02_least_squares_gauss_newton.html">02</a></td>
+</tr>
+<tr>
+<td>ガウス・ニュートン法</td>
+<td>Gauss–Newton method</td>
+<td>残差を 1 次近似して <span class="arithmatex">\(J^\top J \Delta = -J^\top r\)</span> を解く方法</td>
+<td><a href="02_least_squares_gauss_newton.html">02</a></td>
+</tr>
+<tr>
+<td>LM 法</td>
+<td>Levenberg–Marquardt method</td>
+<td>ガウス・ニュートン法に減衰 <span class="arithmatex">\(\mu\)</span> を足して慎重にした方法</td>
+<td><a href="02_least_squares_gauss_newton.html">02</a></td>
+</tr>
+<tr>
+<td>減衰</td>
+<td>damping</td>
+<td>歩幅を小さくするために足す項 (<span class="arithmatex">\(\mu D\)</span>)</td>
+<td><a href="02_least_squares_gauss_newton.html">02</a></td>
+</tr>
+<tr>
+<td>2 次収束</td>
+<td>quadratic convergence</td>
+<td>答えの近くで、合っている桁数がおよそ倍々に増える収束</td>
+<td><a href="02_least_squares_gauss_newton.html">02</a></td>
+</tr>
+<tr>
+<td>射影</td>
+<td>projection</td>
+<td>上下限からはみ出した値を、範囲の中に戻すこと</td>
+<td><a href="02_least_squares_gauss_newton.html">02</a></td>
+</tr>
+<tr>
+<td>2 次計画問題</td>
+<td>quadratic program (QP)</td>
+<td>2 次関数を 1 次の制約のもとで最小にする問題</td>
+<td><a href="03_linear_mpc.html">03</a></td>
+</tr>
+<tr>
+<td>凸</td>
+<td>convex</td>
+<td>局所解がそのまま最適解になる性質</td>
+<td><a href="03_linear_mpc.html">03</a></td>
+</tr>
+<tr>
+<td>能動集合法</td>
+<td>active-set method</td>
+<td>どの制約が効くかを推定しながら QP を解く方法</td>
+<td><a href="03_linear_mpc.html">03</a></td>
+</tr>
+<tr>
+<td>内点法</td>
+<td>interior-point method</td>
+<td>制約の内側から境界に近づきながら解く方法</td>
+<td><a href="03_linear_mpc.html">03</a></td>
+</tr>
+<tr>
+<td>線形フィードバック</td>
+<td>linear feedback</td>
+<td>入力を状態の定数倍 <span class="arithmatex">\(u = -Kx\)</span> で決める制御</td>
+<td><a href="03_linear_mpc.html">03</a></td>
+</tr>
+<tr>
+<td>LQR</td>
+<td>linear quadratic regulator</td>
+<td>線形モデル・2 次コストで、ホライズン無限の最適なフィードバック</td>
+<td><a href="03_linear_mpc.html">03</a></td>
+</tr>
+<tr>
+<td>局所解</td>
+<td>local minimum</td>
+<td>近くでいちばん良いが、全体でいちばんとは限らない答え</td>
+<td><a href="04_nonlinear_mpc.html">04</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="非線形-mpc">非線形 MPC</h2>
+<table>
+<thead>
+<tr>
+<th>日本語</th>
+<th>英語</th>
+<th>ひとことで</th>
+<th>章</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>非線形 MPC</td>
+<td>nonlinear MPC (NMPC)</td>
+<td>非線形モデルを使う MPC</td>
+<td><a href="04_nonlinear_mpc.html">04</a></td>
+</tr>
+<tr>
+<td>線形化</td>
+<td>linearization</td>
+<td>今の案のまわりで 1 次式に近似すること (<span class="arithmatex">\(A_t\)</span>, <span class="arithmatex">\(B_t\)</span>)</td>
+<td><a href="04_nonlinear_mpc.html">04</a></td>
+</tr>
+<tr>
+<td>連鎖律</td>
+<td>chain rule</td>
+<td>合成関数の微分の規則。<span class="arithmatex">\(\partial x_t / \partial u_s = A_{t-1} \cdots A_{s+1} B_s\)</span></td>
+<td><a href="04_nonlinear_mpc.html">04</a></td>
+</tr>
+<tr>
+<td>感度</td>
+<td>sensitivity</td>
+<td>入力を少し変えたとき、後の状態がどれだけ変わるか</td>
+<td><a href="03_linear_mpc.html">03</a>, <a href="04_nonlinear_mpc.html">04</a></td>
+</tr>
+<tr>
+<td>single shooting</td>
+<td>single shooting</td>
+<td>入力だけを変数にし、状態はモデルで順に計算する置き方</td>
+<td><a href="04_nonlinear_mpc.html">04</a></td>
+</tr>
+<tr>
+<td>multiple shooting</td>
+<td>multiple shooting</td>
+<td>区間の始点の状態も変数にし、つなぎ目の一致を制約にする置き方</td>
+<td><a href="04_nonlinear_mpc.html">04</a></td>
+</tr>
+<tr>
+<td>逐次 2 次計画法</td>
+<td>sequential quadratic programming (SQP)</td>
+<td>近似した QP を解いて直す、をくり返す方法</td>
+<td><a href="04_nonlinear_mpc.html">04</a></td>
+</tr>
+<tr>
+<td>RTI</td>
+<td>real-time iteration</td>
+<td>SQP の反復を 1 周期に 1 回だけ行う方法</td>
+<td><a href="04_nonlinear_mpc.html">04</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="mppi">MPPI</h2>
+<table>
+<thead>
+<tr>
+<th>日本語</th>
+<th>英語</th>
+<th>ひとことで</th>
+<th>章</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MPPI</td>
+<td>model predictive path integral</td>
+<td>入力の列を試して、コストの低いものほど重くして平均する MPC</td>
+<td><a href="05_mppi_basics.html">05</a></td>
+</tr>
+<tr>
+<td>サンプル</td>
+<td>sample</td>
+<td>ゆらぎを足して作った入力の列の 1 本</td>
+<td><a href="05_mppi_basics.html">05</a></td>
+</tr>
+<tr>
+<td>ゆらぎ</td>
+<td>perturbation, noise</td>
+<td>今の案に足すランダムな値 <span class="arithmatex">\(\varepsilon \sim \mathcal N(0, \Sigma)\)</span></td>
+<td><a href="05_mppi_basics.html">05</a></td>
+</tr>
+<tr>
+<td>共分散行列</td>
+<td>covariance matrix</td>
+<td>ゆらぎの大きさと相関を表す行列 <span class="arithmatex">\(\Sigma\)</span></td>
+<td><a href="05_mppi_basics.html">05</a></td>
+</tr>
+<tr>
+<td>重み</td>
+<td>weight</td>
+<td>サンプルの重要度 <span class="arithmatex">\(w_k \propto e^{-S_k/\lambda}\)</span></td>
+<td><a href="05_mppi_basics.html">05</a></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\lambda\)</span> (Nav2 では temperature)</td>
+<td>lambda, temperature</td>
+<td>コスト差の目盛り。どれくらいの差を大きな差とみなすか</td>
+<td><a href="05_mppi_basics.html">05</a></td>
+</tr>
+<tr>
+<td>実効サンプル数</td>
+<td>effective sample size (ESS)</td>
+<td>実質的に何本分のサンプルを平均しているか <span class="arithmatex">\(1 / \sum_k w_k^2\)</span></td>
+<td><a href="05_mppi_basics.html">05</a></td>
+</tr>
+<tr>
+<td>KL ダイバージェンス</td>
+<td>Kullback–Leibler divergence</td>
+<td>2 つの分布の違いの大きさ</td>
+<td><a href="06_mppi_theory.html">06</a></td>
+</tr>
+<tr>
+<td>重点サンプリング</td>
+<td>importance sampling</td>
+<td>引きやすい分布から引いて、重みで補正して平均を求める方法</td>
+<td><a href="06_mppi_theory.html">06</a></td>
+</tr>
+<tr>
+<td>自由エネルギー</td>
+<td>free energy</td>
+<td>ぼかしたコスト <span class="arithmatex">\(F_\lambda = -\lambda \log \mathbb E[e^{-S/\lambda}]\)</span></td>
+<td><a href="06_mppi_theory.html">06</a></td>
+</tr>
+<tr>
+<td>Savitzky–Golay フィルタ</td>
+<td>Savitzky–Golay filter</td>
+<td>近くの点に多項式を当てはめてなめらかにするフィルタ</td>
+<td><a href="05_mppi_basics.html">05</a>, <a href="08_nav2_mppi.html">08</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="nav2">Nav2</h2>
+<table>
+<thead>
+<tr>
+<th>日本語</th>
+<th>英語</th>
+<th>ひとことで</th>
+<th>章</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nav2</td>
+<td>Navigation2</td>
+<td>ROS 2 のナビゲーションスタック</td>
+<td><a href="08_nav2_mppi.html">08</a></td>
+</tr>
+<tr>
+<td>コストマップ</td>
+<td>costmap</td>
+<td>地図の各マスに、障害物への近さなどのコストを書いた格子</td>
+<td><a href="08_nav2_mppi.html">08</a></td>
+</tr>
+<tr>
+<td>critic</td>
+<td>critic</td>
+<td>Nav2 の MPPI で、コストの項を計算するプラグイン</td>
+<td><a href="08_nav2_mppi.html">08</a></td>
+</tr>
+<tr>
+<td>コントローラ</td>
+<td>controller</td>
+<td>経路に沿って速度指令を出す部分 (局所的な計画器)</td>
+<td><a href="08_nav2_mppi.html">08</a></td>
+</tr>
+</tbody>
+</table>
+<label class="read-toggle"><input type="checkbox" id="read-toggle" data-slug="09_glossary"> この章を読んだ</label>
+<nav class="pager" aria-label="前後の章"><a class="prev" href="08_nav2_mppi.html"><small>前へ</small>08 Nav2 の MPPI</a></nav>
+</article>
+</main>
+</div>
+<script src="assets/app.js"></script>
+<script src="assets/ctrl.js"></script>
+<script src="assets/demos.js"></script>
+</body>
+</html>
